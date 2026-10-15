@@ -2084,9 +2084,13 @@ export function useHomePageController({
 
   const applyImportedConfig = useCallback((
     payload: Record<string, unknown>,
-    options: { includeProxy?: boolean; resetMissingBackdropAsPoster?: boolean } = {}
+    options: { includeProxy?: boolean; resetMissingBackdropAsPoster?: boolean; resetMissingPosterRotateDaily?: boolean } = {}
   ) => {
-    const { includeProxy = true, resetMissingBackdropAsPoster = false } = options;
+    const {
+      includeProxy = true,
+      resetMissingBackdropAsPoster = false,
+      resetMissingPosterRotateDaily = false,
+    } = options;
     if (typeof payload.tmdbKey === 'string') {
       setTmdbKey(payload.tmdbKey);
     }
@@ -2256,7 +2260,12 @@ export function useHomePageController({
       setPosterRotateDailyEnabled(payload.posterRotateDailyEnabled);
     } else if (payload.posterRotateDaily === 'on' || payload.posterRotateDaily === true || payload.posterRotateDaily === 'true') {
       setPosterRotateDailyEnabled(true);
-    } else if (payload.posterRotateDaily === 'off' || payload.posterRotateDaily === false || payload.posterRotateDaily === 'false') {
+    } else if (
+      payload.posterRotateDaily === 'off' ||
+      payload.posterRotateDaily === false ||
+      payload.posterRotateDaily === 'false' ||
+      resetMissingPosterRotateDaily
+    ) {
       setPosterRotateDailyEnabled(false);
     }
     if (typeof payload.ranking === 'string') {
@@ -2500,7 +2509,11 @@ export function useHomePageController({
       return;
     }
     const frameId = window.requestAnimationFrame(() => {
-      applyImportedConfig(initialConfig, { includeProxy: false, resetMissingBackdropAsPoster: true });
+      applyImportedConfig(initialConfig, {
+        includeProxy: false,
+        resetMissingBackdropAsPoster: true,
+        resetMissingPosterRotateDaily: true,
+      });
     });
     return () => window.cancelAnimationFrame(frameId);
   }, [applyImportedConfig, initialConfig]);
