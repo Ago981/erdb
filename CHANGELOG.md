@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.15](https://github.com/realbestia1/erdb/compare/v0.7.14...v0.7.15) - 2026-10-17
+
+- Refresh workspace UI and rating defaults ([011f930](https://github.com/realbestia1/erdb/commit/011f930764c3239806401cbbd0a7ae227470ef14))
+  Update workspace typography, spacing, contrast, and floating preview positioning. Use square rating badges by default, remove the glass style from the options, and keep browser-stored configs from overriding the token-level genre style. Bump version to 0.7.15.
+- Add collapsible workspace settings ([5159a19](https://github.com/realbestia1/erdb/commit/5159a19c10809db1c6f3cd153708f616d9cabd83))
+  Group workspace controls into expandable sections and require a TMDB key to access the remaining settings. Reorganize ranking, layout, and style options.
+
 ## [0.7.14](https://github.com/realbestia1/erdb/compare/v0.7.13...v0.7.14) - 2026-10-17
 
 - Add configurable poster genre chip style ([dbf17d0](https://github.com/realbestia1/erdb/commit/dbf17d0e560fc2982adad9d2fc6d4e2256c853e8))
