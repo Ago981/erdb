@@ -2356,8 +2356,13 @@ export const renderWithSharp = async (
         let useWidth = renderedWidth;
         let useHeight = renderedHeight;
         if (sameRowResult.scaled) {
+          // Sharing the quality row: the ranking plate is shrunk to the chip height so the
+          // two plate styles line up instead of the ranking towering over the chips. The
+          // ranking SVG carries a 4px bleed around its plate, so the canvas has to be scaled
+          // up a touch for the *visible* plate to match the chip plate.
           const qualityHeight = lastPosterQualityBottomY - lastPosterQualityTopY;
-          const targetHeight = Math.max(qualityHeight, Math.round(qualityHeight * 1.6));
+          const rankingPlateRatio = (rankingSpec.height - 1.5) / (rankingSpec.height + 8);
+          const targetHeight = Math.round(qualityHeight / rankingPlateRatio);
           const heightScale = Math.min(1, targetHeight / renderedHeight);
           useWidth = Math.round(renderedWidth * heightScale);
           useHeight = Math.round(renderedHeight * heightScale);
