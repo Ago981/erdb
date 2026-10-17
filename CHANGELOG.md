@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.17](https://github.com/realbestia1/erdb/compare/v0.7.16...v0.7.17) - 2026-10-17
+
+- Document simplified image URL patterns ([c54dfd0](https://github.com/realbestia1/erdb/commit/c54dfd0ca792f500939d1e3179c191fd8c3a65be))
+  Update the docs and AI integration prompt to use IDs directly in image URLs with media type passed as a query parameter. Bump the package version to 0.7.17.
+
 ## [0.7.16](https://github.com/realbestia1/erdb/compare/v0.7.15...v0.7.16) - 2026-10-17
 
 - Fix workspace modal backgrounds ([5aa2bf7](https://github.com/realbestia1/erdb/commit/5aa2bf772abd08e91ce0ecb8be47a59fc531d363))
