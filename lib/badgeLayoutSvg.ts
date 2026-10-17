@@ -87,7 +87,7 @@ export const estimateBadgeTextWidth = (
     if (ch === '.' || ch === ',' || ch === ':') return fontSize * (compactText ? 0.22 : 0.28);
     if (ch === ' ') return fontSize * (compactText ? 0.24 : 0.30);
     if (ch === ' ' || ch === ' ') return fontSize * (compactText ? 0.14 : 0.18); // thin / narrow no-break space
-    if (ch === '★') return fontSize * 0.88;
+    if (ch === '★') return fontSize * (compactText ? 0.94 : 1.0);
     if (ch === '•') return fontSize * (compactText ? 0.34 : 0.40);
     if (/[mwMW]/.test(ch)) return fontSize * (compactText ? 0.76 : 0.82);
     if (/[A-Z]/.test(ch)) return fontSize * (compactText ? 0.62 : 0.68);
@@ -95,11 +95,15 @@ export const estimateBadgeTextWidth = (
     return fontSize * (compactText ? 0.54 : 0.58);
   };
   const measuredTextWidth = [...normalized].reduce((acc, ch) => acc + measureChar(ch), 0);
+  // The star glyph comes from a fallback font, so treat it like '%'/'/' and keep a
+  // generous right-hand safety margin: the estimate is a floor for the plate width.
+  const needsGenerousSafety =
+    normalized.endsWith('%') || normalized.includes('/') || normalized.includes('★');
   const safetyRightPadding = Math.max(
     compactText ? 1 : 2,
     Math.round(
       fontSize *
-      (normalized.endsWith('%') || normalized.includes('/')
+      (needsGenerousSafety
         ? compactText ? 0.20 : 0.28
         : compactText ? 0.04 : 0.06)
     )
@@ -130,7 +134,11 @@ export const estimateBadgeWidth = (
   const isStackedStarPromotion = isStacked && value.includes('★');
   const displayValue = isStackedStarPromotion ? value.replace('★ ', '').replace('★', '').trim() : value;
   const textWidth = estimateBadgeTextWidth(displayValue, fontSize, compactText, isStacked);
-  const outerPadding = Math.max(6, Math.round(paddingX * 0.7));
+  // Badges without an icon (e.g. the average rating "Genre ★ value") have nothing but text
+  // against the plate edge, so they get the full paddingX: with 0.7x the text sat ~4px from
+  // the border in Square Dark while the vertical padding was ~17px.
+  const outerPadding =
+    iconSize > 0 ? Math.max(6, Math.round(paddingX * 0.7)) : Math.max(6, Math.round(paddingX));
   const innerGap = outerPadding;
   if (contentLayout === 'stacked') {
     return Math.max(
@@ -170,7 +178,8 @@ export const getMinimumCompressedBadgeWidth = (
   compactText = false,
   contentLayout: 'standard' | 'stacked' = 'standard'
 ) => {
-  const outerPadding = Math.max(6, Math.round(paddingX * 0.7));
+  const outerPadding =
+    iconSize > 0 ? Math.max(6, Math.round(paddingX * 0.7)) : Math.max(6, Math.round(paddingX));
   if (contentLayout === 'stacked') {
     return Math.max(outerPadding * 2 + iconSize, outerPadding * 2 + Math.round(fontSize * (compactText ? 0.82 : 0.92)));
   }
@@ -191,20 +200,23 @@ export const measureBadgeRowWidth = (
 ) => {
   if (rowBadges.length === 0) return 0;
   return (
-    rowBadges.reduce(
-      (acc, badge) =>
+    rowBadges.reduce((acc, badge) => {
+      // The average badge is rendered without an icon (see imageRenderer), so do not
+      // charge it an icon + gap when measuring the row.
+      const iconless = badge.key === 'average';
+      return (
         acc +
         estimateBadgeWidth(
           badge.value,
           metrics.fontSize,
           metrics.paddingX,
-          metrics.iconSize,
-          metrics.gap,
+          iconless ? 0 : metrics.iconSize,
+          iconless ? 0 : metrics.gap,
           compactText,
           contentLayout
-        ),
-      0
-    ) +
+        )
+      );
+    }, 0) +
     Math.max(0, rowBadges.length - 1) * metrics.gap
   );
 };
@@ -543,6 +555,71 @@ export const getBadgeOuterRadius = (height: number, ratingStyle: RatingStyle) =>
 export const getBadgeIconRadius = (iconSize: number, ratingStyle: RatingStyle) =>
   ratingStyle === 'square' ? Math.max(6, Math.round(iconSize * 0.22)) : Math.round(iconSize / 2);
 
+// Square Dark plate color: the same slate used by the ranking badge box, not pure black.
+export const SQUARE_BADGE_FILL = 'rgba(21,35,49,0.92)';
+
+// Pill Glass material (Apple-style frosted capsule): neutral smoked (or clear) body,
+// top sheen, light rim and a soft drop shadow. The accent color never tints the
+// material: it stays on the icon, text and quality label only.
+// 'colored'  -> smoked dark glass (readable over bright posters)
+// 'transparent' -> clear light glass
+export const buildGlassCapsule = (args: {
+  id: string;
+  clipId: string;
+  width: number;
+  height: number;
+  radius: number;
+  colorMode?: 'colored' | 'transparent';
+}) => {
+  const { id, clipId, width, height, radius, colorMode = 'colored' } = args;
+  const clear = colorMode === 'transparent';
+  const bodyTop = clear ? '#eef1f6' : '#262b35';
+  const bodyBottom = clear ? '#c3c9d4' : '#0a0c10';
+  const bodyTopOpacity = clear ? '0.20' : '0.62';
+  const bodyBottomOpacity = clear ? '0.10' : '0.74';
+  const sheenTopOpacity = clear ? '0.30' : '0.18';
+  const rimTopOpacity = clear ? '0.85' : '0.55';
+  const rimBottomOpacity = clear ? '0.28' : '0.12';
+  const bottomLiftOpacity = clear ? '0.30' : '0.12';
+  const sheenHeight = Math.max(1, Math.round(height * 0.45));
+  const bottomLineY = Math.max(1, height - 2.2);
+  return `
+<defs>
+  <clipPath id="${clipId}">
+    <rect x="0" y="0" width="${width}" height="${height}" rx="${radius}" />
+  </clipPath>
+  <linearGradient id="apple-glass-fill-${id}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="${bodyTop}" stop-opacity="${bodyTopOpacity}" />
+    <stop offset="100%" stop-color="${bodyBottom}" stop-opacity="${bodyBottomOpacity}" />
+  </linearGradient>
+  <linearGradient id="apple-glass-sheen-${id}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ffffff" stop-opacity="${sheenTopOpacity}" />
+    <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+  </linearGradient>
+  <linearGradient id="apple-glass-border-${id}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#ffffff" stop-opacity="${rimTopOpacity}" />
+    <stop offset="100%" stop-color="#ffffff" stop-opacity="${rimBottomOpacity}" />
+  </linearGradient>
+  <filter id="apple-glass-shadow-${id}" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="2.8" />
+    <feOffset dx="0" dy="3.2" result="offsetblur" />
+    <feFlood flood-color="#000000" flood-opacity="0.54" result="glowcolor" />
+    <feComposite in="glowcolor" in2="offsetblur" operator="in" result="glow" />
+    <feMerge>
+      <feMergeNode in="glow" />
+      <feMergeNode in="SourceGraphic" />
+    </feMerge>
+  </filter>
+</defs>
+<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${radius}" fill="url(#apple-glass-fill-${id})" filter="url(#apple-glass-shadow-${id})" />
+<g clip-path="url(#${clipId})">
+  <rect x="0" y="0" width="${width}" height="${sheenHeight}" fill="url(#apple-glass-sheen-${id})" />
+  <rect x="1" y="${bottomLineY}" width="${Math.max(0, width - 2)}" height="1.2" rx="0.6" fill="#ffffff" fill-opacity="${bottomLiftOpacity}" />
+</g>
+<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${radius}" fill="none" stroke="url(#apple-glass-border-${id})" stroke-width="1" />
+`.trim();
+};
+
 export const buildQualityBadgeSvg = (
   key: StreamBadgeKey,
   height: number,
@@ -569,51 +646,19 @@ export const buildQualityBadgeSvg = (
     `<rect x="${strokeWidth / 2}" y="${strokeWidth / 2}" width="${Math.max(0, width - strokeWidth)}" height="${Math.max(0, h - strokeWidth)}" rx="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" ${extra}/>`;
   const resolveChrome = (accentColor: string) => {
     if (style === 'plain') return null;
-    if (style === 'glass') {
-      return {
-        stroke: accentColor,
-        strokeOpacity: '0.58',
-        fill: 'rgba(17,24,39,0.70)',
-      };
-    }
-    return { stroke: accentColor, strokeOpacity: '1', fill: '#0b0b0b' };
+    return { stroke: accentColor, strokeOpacity: '1', fill: SQUARE_BADGE_FILL };
   };
   const buildRect = (width: number, accentColor: string, extra = '') => {
     if (style === 'plain') return '';
     if (style === 'glass') {
       const gradientId = `apple-glass-q-${key.replace(/[^a-z0-9]/gi, '-')}-${Math.round(accentColor.length)}`;
-      const isWhite = accentColor.toLowerCase() === '#ffffff' || colorMode === 'white';
-      const fillOpacityStart = isWhite ? '0.12' : '0.22';
-      const fillOpacityEnd = isWhite ? '0.04' : '0.10';
-      const borderOpacityStart = isWhite ? '0.25' : '0.42';
-      const borderOpacityEnd = isWhite ? '0.10' : '0.20';
-      return `
-<defs>
-  <clipPath id="capsule-clip-${gradientId}">
-    <rect x="0" y="0" width="${width}" height="${h}" rx="${radius}" />
-  </clipPath>
-  <linearGradient id="apple-glass-fill-${gradientId}" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="${accentColor}" stop-opacity="${fillOpacityStart}" />
-    <stop offset="100%" stop-color="${accentColor}" stop-opacity="${fillOpacityEnd}" />
-  </linearGradient>
-  <linearGradient id="apple-glass-border-${gradientId}" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="${accentColor}" stop-opacity="${borderOpacityStart}" />
-    <stop offset="100%" stop-color="${accentColor}" stop-opacity="${borderOpacityEnd}" />
-  </linearGradient>
-  <filter id="apple-glass-shadow-${gradientId}" x="-30%" y="-30%" width="160%" height="160%">
-    <feGaussianBlur in="SourceAlpha" stdDeviation="2.8" />
-    <feOffset dx="0" dy="3.2" result="offsetblur" />
-    <feFlood flood-color="#000000" flood-opacity="0.54" result="glowcolor" />
-    <feComposite in="glowcolor" in2="offsetblur" operator="in" result="glow" />
-    <feMerge>
-      <feMergeNode in="glow" />
-      <feMergeNode in="SourceGraphic" />
-    </feMerge>
-  </filter>
-</defs>
-<rect x="0.5" y="0.5" width="${width - 1}" height="${h - 1}" rx="${radius}" fill="url(#apple-glass-fill-${gradientId})" filter="url(#apple-glass-shadow-${gradientId})" ${extra} />
-<rect x="0.5" y="0.5" width="${width - 1}" height="${h - 1}" rx="${radius}" fill="none" stroke="url(#apple-glass-border-${gradientId})" stroke-width="1" ${extra} />
-`.trim();
+      return buildGlassCapsule({
+        id: gradientId,
+        clipId: `capsule-clip-${gradientId}`,
+        width,
+        height: h,
+        radius,
+      });
     }
     const chrome = resolveChrome(accentColor);
     if (!chrome) return '';
@@ -784,7 +829,7 @@ ${clipEnd}
     const smallTextColor = colorMode === 'white' ? '#ffffff' : '#a7f3d0';
     const rect =
       style === 'square'
-        ? baseRect(width, rectBorder, '#0b0b0b')
+        ? baseRect(width, rectBorder, SQUARE_BADGE_FILL)
         : buildRect(width, nonSquareAccent);
     const clipStart = style === 'glass' ? `<g clip-path="url(#capsule-clip-apple-glass-q-hdr-7)">` : '';
     const clipEnd = style === 'glass' ? '</g>' : '';
@@ -939,13 +984,17 @@ export const buildBadgeSvg = ({
       ? Math.max(16, Math.round(iconSize * 0.78))
       : radius;
   const iconRadius = getBadgeIconRadius(iconSize, ratingStyle);
-  const outerPadding = Math.max(6, Math.round(paddingX * 0.7));
+  const hideIcon = !iconDataUri && monogram === '';
+  // Icon-less badges (average rating) get the full paddingX on the sides,
+  // mirroring estimateBadgeWidth so the plate and the text stay in sync.
+  const outerPadding = hideIcon
+    ? Math.max(6, Math.round(paddingX))
+    : Math.max(6, Math.round(paddingX * 0.7));
   const innerGap = contentLayout === 'stacked' ? Math.max(4, Math.round(outerPadding * 0.65)) : outerPadding;
   const iconX =
     contentLayout === 'stacked'
       ? Math.max(outerPadding, Math.round((width - iconSize) / 2))
       : outerPadding;
-  const hideIcon = !iconDataUri && monogram === '';
   const iconY =
     contentLayout === 'stacked'
       ? outerPadding
@@ -989,8 +1038,8 @@ export const buildBadgeSvg = ({
     hideIcon || ratingStyle === 'plain' || iconDataUri
       ? ''
       : ratingStyle === 'square'
-        ? `<rect x="${iconX + 0.75}" y="${iconY + 0.75}" width="${Math.max(0, iconSize - 1.5)}" height="${Math.max(0, iconSize - 1.5)}" rx="${Math.max(4, iconCornerRadius || iconRadius)}" fill="rgb(10,10,10)" />`
-        : `<circle cx="${iconCx}" cy="${iconCy}" r="${iconRadius}" fill="${accentColor}" stroke="rgba(255,255,255,0.45)" />`;
+        ? `<rect x="${iconX + 0.75}" y="${iconY + 0.75}" width="${Math.max(0, iconSize - 1.5)}" height="${Math.max(0, iconSize - 1.5)}" rx="${Math.max(4, iconCornerRadius || iconRadius)}" fill="${SQUARE_BADGE_FILL}" />`
+        : `<circle cx="${iconCx}" cy="${iconCy}" r="${iconRadius}" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.32)" />`;
   const iconClipPath =
     ratingStyle === 'plain'
       ? ''
@@ -1004,45 +1053,20 @@ export const buildBadgeSvg = ({
         ? iconCornerRadius > 0
           ? `<rect x="${iconX + 1.5}" y="${iconY + 1.5}" width="${Math.max(0, iconSize - 3)}" height="${Math.max(0, iconSize - 3)}" rx="${Math.max(4, iconCornerRadius || iconRadius - 1)}" fill="none" stroke="rgba(255,255,255,0.18)" />`
           : ''
-        : `<circle cx="${iconCx}" cy="${iconCy}" r="${iconRadius}" fill="none" stroke="rgba(255,255,255,0.45)" />`;
-  const glassColor = ratingsColorMode === 'transparent' ? '#ffffff' : accentColor;
-  const glassFillOpacityStart = ratingsColorMode === 'transparent' ? '0.12' : '0.22';
-  const glassFillOpacityEnd = ratingsColorMode === 'transparent' ? '0.04' : '0.10';
-  const glassBorderOpacityStart = ratingsColorMode === 'transparent' ? '0.25' : '0.42';
-  const glassBorderOpacityEnd = ratingsColorMode === 'transparent' ? '0.10' : '0.20';
-
+        : `<circle cx="${iconCx}" cy="${iconCy}" r="${iconRadius}" fill="none" stroke="rgba(255,255,255,0.32)" />`;
   const outerRect =
     ratingStyle === 'plain'
       ? ''
       : ratingStyle === 'square'
-        ? `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${outerRadius}" fill="#0b0b0b" stroke="${accentColor}" />`
-        : `
-<defs>
-  <clipPath id="capsule-clip-${clipPathId}">
-    <rect x="0" y="0" width="${width}" height="${height}" rx="${outerRadius}" />
-  </clipPath>
-  <linearGradient id="apple-glass-fill-${clipPathId}" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="${glassColor}" stop-opacity="${glassFillOpacityStart}" />
-    <stop offset="100%" stop-color="${glassColor}" stop-opacity="${glassFillOpacityEnd}" />
-  </linearGradient>
-  <linearGradient id="apple-glass-border-${clipPathId}" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="${glassColor}" stop-opacity="${glassBorderOpacityStart}" />
-    <stop offset="100%" stop-color="${glassColor}" stop-opacity="${glassBorderOpacityEnd}" />
-  </linearGradient>
-  <filter id="apple-glass-shadow-${clipPathId}" x="-30%" y="-30%" width="160%" height="160%">
-    <feGaussianBlur in="SourceAlpha" stdDeviation="2.8" />
-    <feOffset dx="0" dy="3.2" result="offsetblur" />
-    <feFlood flood-color="#000000" flood-opacity="0.54" result="glowcolor" />
-    <feComposite in="glowcolor" in2="offsetblur" operator="in" result="glow" />
-    <feMerge>
-      <feMergeNode in="glow" />
-      <feMergeNode in="SourceGraphic" />
-    </feMerge>
-  </filter>
-</defs>
-<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${outerRadius}" fill="url(#apple-glass-fill-${clipPathId})" filter="url(#apple-glass-shadow-${clipPathId})" />
-<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${outerRadius}" fill="none" stroke="url(#apple-glass-border-${clipPathId})" stroke-width="1" />
-`.trim();
+        ? `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${outerRadius}" fill="${SQUARE_BADGE_FILL}" stroke="${accentColor}" />`
+        : buildGlassCapsule({
+          id: clipPathId,
+          clipId: `capsule-clip-${clipPathId}`,
+          width,
+          height,
+          radius: outerRadius,
+          colorMode: ratingsColorMode,
+        });
   const monogramFill = ratingStyle === 'glass' ? 'white' : accentColor;
   const textShadowFilter = `
     <filter id="text-shadow" x="-50%" y="-50%" width="200%" height="200%">
