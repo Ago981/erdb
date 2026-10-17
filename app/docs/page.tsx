@@ -175,23 +175,19 @@ export default function DocsPage() {
             <Table
               columns={['Pattern', 'Use when', 'Example']}
               rows={[
-                [<Code key="pattern1">/{'{token}'}/poster/movie/{'{imdbId}'}.jpg</Code>, 'Movie posters from IMDb movie IDs.', <Code key="pattern1ex">/Tk-abc123/poster/movie/tt0133093.jpg</Code>],
-                [<Code key="pattern2">/{'{token}'}/poster/series/{'{imdbId}'}.jpg</Code>, 'Series posters from IMDb series IDs.', <Code key="pattern2ex">/Tk-abc123/poster/series/tt0944947.jpg</Code>],
-                [<Code key="pattern3">/{'{token}'}/backdrop/movie/{'{imdbId}'}.jpg</Code>, 'Movie backdrops from IMDb movie IDs.', <Code key="pattern3ex">/Tk-abc123/backdrop/movie/tt0133093.jpg</Code>],
-                [<Code key="pattern4">/{'{token}'}/backdrop/series/{'{imdbId}'}.jpg</Code>, 'Series backdrops from IMDb series IDs.', <Code key="pattern4ex">/Tk-abc123/backdrop/series/tt0944947.jpg</Code>],
-                [<Code key="pattern5">/{'{token}'}/logo/movie/{'{imdbId}'}.jpg</Code>, 'Movie logos from IMDb movie IDs.', <Code key="pattern5ex">/Tk-abc123/logo/movie/tt0133093.jpg</Code>],
-                [<Code key="pattern6">/{'{token}'}/logo/series/{'{imdbId}'}.jpg</Code>, 'Series logos from IMDb series IDs.', <Code key="pattern6ex">/Tk-abc123/logo/series/tt0944947.jpg</Code>],
-                [<Code key="pattern7">/{'{token}'}/thumbnail/series/{'{seriesImdbId}'}:{'{season}'}:{'{episode}'}.jpg</Code>, 'Episode thumbnails using IMDb episode addressing.', <Code key="pattern7ex">/Tk-abc123/thumbnail/series/tt0944947:1:1.jpg</Code>],
-                [<Code key="pattern8">/{'{token}'}/thumbnail/series/realimdb:{'{seriesImdbId}'}:{'{season}'}:{'{episode}'}.jpg</Code>, 'Episode thumbnails when the addon uses real IMDb TV metadata.', <Code key="pattern8ex">/Tk-abc123/thumbnail/series/realimdb:tt0944947:1:1.jpg</Code>],
-                [<Code key="pattern9">/{'{token}'}/thumbnail/series/tvdb:{'{tvdbId}'}:{'{season}'}:{'{episode}'}.jpg</Code>, 'Episode thumbnails when the addon uses TVDB numbering.', <Code key="pattern9ex">/Tk-abc123/thumbnail/series/tvdb:121361:1:1.jpg</Code>],
-                [<Code key="pattern10">/{'{token}'}/poster/movie/tmdb:{'{tmdbId}'}.jpg</Code>, 'Movie posters when you only have a TMDB movie ID.', <Code key="pattern10ex">/Tk-abc123/poster/movie/tmdb:603.jpg</Code>],
-                [<Code key="pattern11">/{'{token}'}/backdrop/series/tmdb:{'{tmdbId}'}.jpg</Code>, 'Series backdrops when you only have a TMDB TV ID.', <Code key="pattern11ex">/Tk-abc123/backdrop/series/tmdb:1399.jpg</Code>],
+                [<Code key="pattern1">/{'{token}'}/poster/{'{id}'}.jpg?type={'{type}'}</Code>, 'Movie or series poster. Pass any id you already have.', <Code key="pattern1ex">/Tk-abc123/poster/tt0133093.jpg?type=movie</Code>],
+                [<Code key="pattern2">/{'{token}'}/poster/{'{id}'}.jpg?type={'{type}'}&shape={'{shape}'}</Code>, 'Poster with a forced shape (poster / landscape).', <Code key="pattern2ex">/Tk-abc123/poster/tt0133093.jpg?type=movie&shape=landscape</Code>],
+                [<Code key="pattern3">/{'{token}'}/backdrop/{'{id}'}.jpg?type={'{type}'}</Code>, 'Movie or series backdrop.', <Code key="pattern3ex">/Tk-abc123/backdrop/tt0944947.jpg?type=series</Code>],
+                [<Code key="pattern4">/{'{token}'}/logo/{'{id}'}.jpg?type={'{type}'}</Code>, 'Movie or series logo.', <Code key="pattern4ex">/Tk-abc123/logo/tt0944947.jpg?type=series</Code>],
+                [<Code key="pattern5">/{'{token}'}/thumbnail/{'{id}'}:{'{season}'}:{'{episode}'}.jpg?type={'{type}'}</Code>, 'Episode thumbnail.', <Code key="pattern5ex">/Tk-abc123/thumbnail/tt0944947:1:1.jpg?type=series</Code>],
+                [<Code key="pattern6">/{'{token}'}/thumbnail/tvdb:{'{tvdbId}'}:{'{season}'}:{'{episode}'}.jpg?type={'{type}'}</Code>, 'Episode thumbnail when the addon only has TVDB numbering.', <Code key="pattern6ex">/Tk-abc123/thumbnail/tvdb:121361:1:1.jpg?type=series</Code>],
+                [<Code key="pattern7">/{'{token}'}/poster/tmdb:{'{tmdbId}'}.jpg?type={'{type}'}</Code>, 'Poster when only a TMDB id is available.', <Code key="pattern7ex">/Tk-abc123/poster/tmdb:603.jpg?type=movie</Code>],
               ]}
             />
-            <pre className="overflow-x-auto rounded-3xl border border-white/10 bg-[#0a0f16]/90 p-5 text-[12px] leading-6 text-slate-200"><code>{`GET /Tk-abc123xyz/poster/movie/tt0133093.jpg
-GET /Tk-abc123xyz/backdrop/series/tt0944947.jpg
-GET /Tk-abc123xyz/logo/series/tt0944947.jpg
-GET /Tk-abc123xyz/thumbnail/series/realimdb:tt0944947:1:1.jpg`}</code></pre>
+            <pre className="overflow-x-auto rounded-3xl border border-white/10 bg-[#0a0f16]/90 p-5 text-[12px] leading-6 text-slate-200"><code>{`GET /Tk-abc123xyz/poster/tt0133093.jpg?type=movie
+GET /Tk-abc123xyz/backdrop/tt0944947.jpg?type=series
+GET /Tk-abc123xyz/logo/tt0944947.jpg?type=series
+GET /Tk-abc123xyz/thumbnail/tt0944947:1:1.jpg?type=series`}</code></pre>
           </Section>
 
           <Section
