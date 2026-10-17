@@ -1,7 +1,9 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Info, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { Info, AlertTriangle, CheckCircle2, XCircle, ChevronDown, type LucideIcon } from 'lucide-react';
 import { CARD_CLASS } from './constants';
 
 const ACCENTS = {
@@ -37,6 +39,63 @@ export function PanelHeader({
       </div>
       {actions}
     </div>
+  );
+}
+
+export function Section({
+  icon: Icon,
+  title,
+  hint,
+  defaultOpen = false,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  hint?: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const panelId = `section-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  return (
+    <section className="overflow-hidden rounded-3xl border border-white/[0.06] bg-white/[0.02]">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-controls={panelId}
+        className="flex w-full cursor-pointer items-center gap-3 px-3.5 py-3 text-left transition-colors duration-200 hover:bg-white/[0.03] focus-visible:ring-2 focus-visible:ring-orange-400/60 focus-visible:outline-none"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300">
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-semibold text-white">{title}</span>
+          {hint && <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">{hint}</span>}
+        </span>
+        <motion.span
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className="shrink-0 text-slate-500"
+        >
+          <ChevronDown className="h-4 w-4" />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id={panelId}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-3 px-3.5 pb-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
   );
 }
 

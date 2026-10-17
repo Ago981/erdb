@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Dropdown } from './dropdown';
-import { Card, Field, Notice, NumberStepper, PanelHeader, Toggle } from './ui';
+import { Card, Field, Notice, NumberStepper, PanelHeader, Section, Toggle } from './ui';
 import type { HomePageViewProps } from '@/components/workspace/types';
 import { RatingProviderSortableList } from '@/components/rating-provider-sortable-list';
 import { isVerticalPosterRatingLayout, type PosterRatingLayout } from '@/lib/posterRatingLayout';
@@ -39,20 +39,6 @@ import {
 } from './constants';
 
 type WorkspaceControlsPanelProps = Pick<HomePageViewProps, 'state' | 'derived' | 'actions'>;
-
-function SectionTitle({ icon: Icon, title, hint }: { icon: LucideIcon; title: string; hint?: string }) {
-  return (
-    <div className="flex items-start gap-2.5 px-1">
-      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-slate-400">
-        <Icon className="h-3.5 w-3.5" />
-      </span>
-      <div className="min-w-0">
-        <h3 className="text-xs font-semibold text-slate-200">{title}</h3>
-        {hint && <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">{hint}</p>}
-      </div>
-    </div>
-  );
-}
 
 function KeyField({
   label,
@@ -205,6 +191,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
   } = actions;
 
   const usesPosterSettings = previewType === 'poster';
+  const hasTmdbKey = tmdbKey.trim().length > 0;
   const activePreset = POSTER_PRESET_OPTIONS.find((preset) => preset.id === posterConfiguratorPreset);
   const typeLabel =
     previewType === 'poster' && backdropAsPoster
@@ -281,8 +268,12 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
       </div>
 
       <div className="premium-scrollbar flex-1 space-y-6 overflow-y-auto p-4">
-        <section className="space-y-3">
-          <SectionTitle icon={KeyRound} title="API keys" hint="Optional integrations unlock more providers and artwork fallbacks." />
+        <Section
+          icon={KeyRound}
+          title="API keys"
+          hint="Optional integrations unlock more providers and artwork fallbacks."
+          defaultOpen
+        >
 
           <Card>
             <div className="space-y-4">
@@ -316,15 +307,21 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
               />
             </div>
           </Card>
-        </section>
+        </Section>
 
+        {!hasTmdbKey ? (
+          <Notice tone="warning" title="API keys required">
+            Add your TMDB key above to unlock the rest of the settings.
+          </Notice>
+        ) : (
+          <>
         {usesPosterSettings && (
-          <section className="space-y-3">
-            <SectionTitle
-              icon={Palette}
-              title="Preset"
-              hint="Start from a proven layout, then switch to Custom for full manual control."
-            />
+          <Section
+            icon={Palette}
+            title="Preset"
+            hint="Start from a proven layout, then switch to Custom for full manual control."
+            defaultOpen
+          >
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {POSTER_PRESET_OPTIONS.map((preset) => {
                 const isActive = posterConfiguratorPreset === preset.id;
@@ -351,12 +348,16 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
               })}
             </div>
             {posterConfiguratorPreset !== 'custom' && <Notice tone="info">{PRESET_CONTROLS_NOTE}</Notice>}
-          </section>
+          </Section>
         )}
 
         {showArtworkSection && (
-          <section className="space-y-3">
-            <SectionTitle icon={ImageIcon} title="Artwork" hint="Source image, artwork variant and per-type language." />
+          <Section
+            icon={ImageIcon}
+            title="Artwork"
+            hint="Source image, artwork variant and per-type language."
+            defaultOpen
+          >
 
             {previewType === 'poster' && (
               <Toggle
@@ -403,12 +404,11 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
               )}
             </Card>
 
-          </section>
+          </Section>
         )}
 
         {showImageText && (
-          <section className="space-y-3">
-            <SectionTitle icon={Type} title="Artwork text" hint="Base artwork variant used before badges are drawn." />
+          <Section icon={Type} title="Artwork text" hint="Base artwork variant used before badges are drawn.">
             <Card>
               <div className="space-y-3">
                 <Field label="Base artwork">
@@ -431,60 +431,73 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                 </Field>
               </div>
             </Card>
-          </section>
+          </Section>
         )}
 
-        <section className="space-y-3">
-          <SectionTitle icon={SlidersHorizontal} title="Style" hint="Rating badge look and quality indicators." />
+        <Section icon={Trophy} title="Ranking" hint="JustWatch popularity rank drawn on the artwork.">
 
-          {showRatingStyle && (
-            <Card title="Rating style">
+          {!usesPosterSettings ? (
+            <Notice tone="info" title="Posters only">
+              JustWatch rankings are available on posters and on backdrops rendered as posters.
+            </Notice>
+          ) : (
+            <Card>
               <div className="space-y-3">
-                {renderDropdown(activeRatingStyle, (value) => setRatingStyleForType(value as RatingStyle), RATING_STYLE_OPTIONS)}
-                {activeRatingStyle === 'glass' && (
-                  <Field label="Glass style">
-                    {renderDropdown(
-                      activeRatingsColorMode,
-                      (value) => setRatingsColorModeForType(value as 'colored' | 'transparent'),
-                      [
-                        { id: 'colored', label: 'Colored' },
-                        { id: 'transparent', label: 'Transparent' },
-                      ]
-                    )}
-                  </Field>
-                )}
+                <Field label="Interval">{renderDropdown(ranking, setRanking, RANKING_OPTIONS)}</Field>
+
+                <AnimatePresence initial={false}>
+                  {ranking !== 'off' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-3 overflow-hidden"
+                    >
+                      <Field label="Chart country">
+                        <div className="flex items-center gap-2">
+                          <Globe2 className="h-4 w-4 shrink-0 text-slate-500" />
+                          <select
+                            value={hasKnownRankingCountry ? normalizedRankingCountry : rankingCountry}
+                            onChange={(event) => setRankingCountry(event.target.value)}
+                            aria-label="Chart country"
+                            className={INPUT_CLASS}
+                          >
+                            {!hasKnownRankingCountry && <option value={rankingCountry}>{rankingCountry}</option>}
+                            {JUSTWATCH_COUNTRY_OPTIONS.map((option) => (
+                              <option key={option.id} value={option.id} className="bg-[#0a0a0a]">
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </Field>
+
+                      <Toggle
+                        checked={rankingNoBox}
+                        onChange={setRankingNoBox}
+                        label="Hide background box"
+                        hint="Draw the rank directly on the artwork without a container."
+                      />
+
+                      {posterConfiguratorPreset === 'custom' && (
+                        <div className="space-y-3 border-t border-white/5 pt-3">
+                          <Toggle
+                            checked={rankingCompact}
+                            onChange={setRankingCompact}
+                            label="Compact badge"
+                            hint="Use the smaller rank badge variant."
+                          />
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </Card>
           )}
+        </Section>
 
-          {(showPosterQualityBadges || showBackdropQualityBadges) && (
-            <Card title="Quality badges" description="Stream quality indicators (4K, HDR, and similar) added to the artwork.">
-              <div className={`grid gap-3 ${showPosterQualityBadges && posterConfiguratorPreset === 'custom' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
-                {(showBackdropQualityBadges || posterConfiguratorPreset === 'custom') && (
-                  <Field label="Mode">
-                    {renderDropdown(activeStreamBadges, setActiveStreamBadges, STREAM_BADGE_OPTIONS)}
-                  </Field>
-                )}
-                <Field label="Style">
-                  {renderDropdown(activeQualityBadgesStyle, (value) => setActiveQualityBadgesStyle(value as RatingStyle), RATING_STYLE_OPTIONS)}
-                </Field>
-                <Field label="Badge style">
-                  {renderDropdown(activeQualityBadgesColorMode, setActiveQualityBadgesColorMode, [
-                    { id: 'white', label: 'White' },
-                    { id: 'colored', label: 'Colored' },
-                  ])}
-                </Field>
-              </div>
-            </Card>
-          )}
-
-          {previewType === 'logo' && (
-            <Notice tone="info">Logo artwork only shows rating badges. Quality badges and rankings apply to posters and backdrops.</Notice>
-          )}
-        </section>
-
-        <section className="space-y-3">
-          <SectionTitle icon={LayoutGrid} title="Layout" hint="Where ratings, badges, genres and overlays are placed." />
+        <Section icon={LayoutGrid} title="Layout" hint="Where ratings, badges, genres and overlays are placed." defaultOpen>
 
           {usesPosterSettings && (
             <Card>
@@ -528,11 +541,11 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                     <Field label="Genre position">
                       {renderDropdown(posterGenrePosition, setPosterGenrePosition, POSTER_GENRE_POSITION_OPTIONS)}
                     </Field>
-                    <Field label="Genre style" hint="Style of the genre chip when average ratings are off.">
-                      {renderDropdown(posterGenreStyle, setPosterGenreStyle, POSTER_GENRE_STYLE_OPTIONS)}
-                    </Field>
                     <Field label="Quality badges position">
                       {renderDropdown(posterQualityBadgesPosition, setPosterQualityBadgesPosition, POSTER_QUALITY_BADGE_POSITION_OPTIONS)}
+                    </Field>
+                    <Field label="Ranking position">
+                      {renderDropdown(rankingPosition, setRankingPosition, RANKING_POSITION_OPTIONS)}
                     </Field>
                     <Toggle
                       checked={posterAverageRatingsEnabled}
@@ -673,77 +686,70 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
               </div>
             </Card>
           )}
-        </section>
+        </Section>
 
-        <section className="space-y-3">
-          <SectionTitle icon={Trophy} title="Ranking" hint="JustWatch popularity rank drawn on the artwork." />
+        <Section icon={SlidersHorizontal} title="Style" hint="Rating badge look and quality indicators." defaultOpen>
 
-          {!usesPosterSettings ? (
-            <Notice tone="info" title="Posters only">
-              JustWatch rankings are available on posters and on backdrops rendered as posters.
-            </Notice>
-          ) : (
-            <Card>
+          {showRatingStyle && (
+            <Card title="Rating style">
               <div className="space-y-3">
-                <Field label="Interval">{renderDropdown(ranking, setRanking, RANKING_OPTIONS)}</Field>
-
-                <AnimatePresence initial={false}>
-                  {ranking !== 'off' && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="space-y-3 overflow-hidden"
-                    >
-                      <Field label="Chart country">
-                        <div className="flex items-center gap-2">
-                          <Globe2 className="h-4 w-4 shrink-0 text-slate-500" />
-                          <select
-                            value={hasKnownRankingCountry ? normalizedRankingCountry : rankingCountry}
-                            onChange={(event) => setRankingCountry(event.target.value)}
-                            aria-label="Chart country"
-                            className={INPUT_CLASS}
-                          >
-                            {!hasKnownRankingCountry && <option value={rankingCountry}>{rankingCountry}</option>}
-                            {JUSTWATCH_COUNTRY_OPTIONS.map((option) => (
-                              <option key={option.id} value={option.id} className="bg-[#0a0a0a]">
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </Field>
-
-                      <Toggle
-                        checked={rankingNoBox}
-                        onChange={setRankingNoBox}
-                        label="Hide background box"
-                        hint="Draw the rank directly on the artwork without a container."
-                      />
-
-                      {posterConfiguratorPreset === 'custom' && (
-                        <div className="space-y-3 border-t border-white/5 pt-3">
-                          <Field label="Ranking position">
-                            {renderDropdown(rankingPosition, setRankingPosition, RANKING_POSITION_OPTIONS)}
-                          </Field>
-                          <Toggle
-                            checked={rankingCompact}
-                            onChange={setRankingCompact}
-                            label="Compact badge"
-                            hint="Use the smaller rank badge variant."
-                          />
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {renderDropdown(activeRatingStyle, (value) => setRatingStyleForType(value as RatingStyle), RATING_STYLE_OPTIONS)}
+                {activeRatingStyle === 'glass' && (
+                  <Field label="Glass style">
+                    {renderDropdown(
+                      activeRatingsColorMode,
+                      (value) => setRatingsColorModeForType(value as 'colored' | 'transparent'),
+                      [
+                        { id: 'colored', label: 'Colored' },
+                        { id: 'transparent', label: 'Transparent' },
+                      ]
+                    )}
+                  </Field>
+                )}
               </div>
             </Card>
           )}
-        </section>
 
-        <section className="space-y-3">
-          <SectionTitle icon={ListOrdered} title="Providers" hint="Which sources feed the rating badges, in display order." />
+          {(showPosterQualityBadges || showBackdropQualityBadges) && activeStreamBadges !== 'off' && (
+            <Card title="Quality badges" description="Stream quality indicators (4K, HDR, and similar) added to the artwork.">
+              <div className={`grid gap-3 ${showPosterQualityBadges && posterConfiguratorPreset === 'custom' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+                {(showBackdropQualityBadges || posterConfiguratorPreset === 'custom') && (
+                  <Field label="Mode">
+                    {renderDropdown(activeStreamBadges, setActiveStreamBadges, STREAM_BADGE_OPTIONS)}
+                  </Field>
+                )}
+                <Field label="Style">
+                  {renderDropdown(activeQualityBadgesStyle, (value) => setActiveQualityBadgesStyle(value as RatingStyle), RATING_STYLE_OPTIONS)}
+                </Field>
+                <Field label="Badge style">
+                  {renderDropdown(activeQualityBadgesColorMode, setActiveQualityBadgesColorMode, [
+                    { id: 'white', label: 'White' },
+                    { id: 'colored', label: 'Colored' },
+                  ])}
+                </Field>
+              </div>
+            </Card>
+          )}
+
+          {usesPosterSettings && posterGenrePosition !== 'off' && !averageRatingNotice && (
+            <Card title="Genre" description="Style of the genre chip drawn on the poster while average ratings are off.">
+              <Field label="Style">
+                {renderDropdown(posterGenreStyle, setPosterGenreStyle, POSTER_GENRE_STYLE_OPTIONS)}
+              </Field>
+            </Card>
+          )}
+
+          {previewType === 'logo' && (
+            <Notice tone="info">Logo artwork only shows rating badges. Quality badges and rankings apply to posters and backdrops.</Notice>
+          )}
+        </Section>
+
+        <Section
+          icon={ListOrdered}
+          title="Providers"
+          hint="Which sources feed the rating badges, in display order."
+          defaultOpen
+        >
 
           <Card>
             <div className="space-y-3">
@@ -783,8 +789,9 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
               />
             </div>
           </Card>
-        </section>
-
+        </Section>
+          </>
+        )}
         <Notice tone="info" title="Applying changes">
           Changes are previewed instantly. With a token account, press <span className="font-semibold">Save</span> in the
           top bar to push them to your installed addons.
