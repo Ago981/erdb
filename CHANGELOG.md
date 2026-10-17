@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.13](https://github.com/realbestia1/erdb/compare/v0.7.12...v0.7.13) - 2026-10-17
+
+- Improve generated logos for non-Latin scripts ([62fabc5](https://github.com/realbestia1/erdb/commit/62fabc5c3eacc6e0a2a0bc6ce50192dbf633770e))
+  Estimate line widths using script-aware glyph factors for CJK, RTL, and South Asian text, and disable letter spacing for RTL logos. Bump the image renderer cache version and package version.
+
 ## [0.7.12](https://github.com/realbestia1/erdb/compare/v0.7.11...v0.7.12) - 2026-10-17
 
 - Center localized ranking badge text ([9e42291](https://github.com/realbestia1/erdb/commit/9e42291bbdd6d97fd40d90b90a513445a270abdd))
