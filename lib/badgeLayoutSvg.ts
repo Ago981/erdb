@@ -594,6 +594,9 @@ export const getQualityBadgeTextWidth = (key: StreamBadgeKey, height: number) =>
   return estimateBadgeTextWidth(label, qualityMetaTextSize(h, label));
 };
 
+// Uniform inset between the plate edge and the logo artwork.
+const qualityIconInset = (h: number) => Math.max(2, Math.round(h * 0.16));
+
 // Plate width for a quality badge: the icon artwork dictates its own aspect ratio,
 // a text-only badge only needs to fit its label plus the plate inset.
 export const getQualityBadgePlateWidth = (key: StreamBadgeKey, height: number, hasIcon = false) => {
@@ -601,8 +604,12 @@ export const getQualityBadgePlateWidth = (key: StreamBadgeKey, height: number, h
   const meta = STREAM_BADGE_META.get(key);
   const aspect = meta?.iconWidthRatio ?? Math.max(1.35, 0.72 + (meta?.label.length ?? 2) * 0.34);
   const iconWidth = Math.round(h * aspect);
-  // Icons keep their size: the plate grows a bit so the artwork never sits on the border.
-  if (hasIcon) return iconWidth + Math.round(h * 0.16);
+  // Icons keep their size: the plate is the artwork box plus a uniform inset, so the logo
+  // fills the plate instead of floating in the middle of it.
+  if (hasIcon) {
+    const inset = qualityIconInset(h);
+    return Math.round((h - inset * 2) * Math.max(1, aspect)) + inset * 2;
+  }
   const inset = Math.max(10, Math.round(h * 0.18));
   return Math.min(iconWidth, Math.max(Math.round(h * 1.15), Math.round(getQualityBadgeTextWidth(key, h) + inset * 2)));
 };
@@ -831,9 +838,9 @@ ${content}
     const rectColor = colorMode === 'white' ? '#ffffff' : (iconMeta.accentColor || '#ffffff');
     const rect = isReferencePlain ? '' : buildRect(width, rectColor);
     // The plate keeps its size (so it stays comparable to the ranking box) and the logo
-    // floats inside it: 16% vertical, a bit more on the sides for the pill's rounded ends.
-    const imagePaddingY = Math.max(2, Math.round(h * 0.16));
-    const imagePaddingX = Math.max(imagePaddingY, Math.round(width * 0.1));
+    // floats inside it with the same inset on every side.
+    const imagePaddingY = qualityIconInset(h);
+    const imagePaddingX = imagePaddingY;
     const imageWidth = Math.max(1, width - imagePaddingX * 2);
     const imageHeight = Math.max(1, h - imagePaddingY * 2);
 
@@ -845,6 +852,24 @@ ${content}
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}" viewBox="0 0 ${width} ${h}">
 ${rect}
 <image href="${imageHref}" x="${imagePaddingX}" y="${imagePaddingY}" width="${imageWidth}" height="${imageHeight}" preserveAspectRatio="xMidYMid meet"/>
+</svg>`;
+    return { svg, width, height: h };
+  }
+
+  // No logo available (icon fetch failed): keep the plate and the single clean label of the
+  // logo variant instead of switching to the outlined two-line text badge, which used to make
+  // these chips look different from the ones that did load their logo.
+  if (iconMeta && !isReferencePlain) {
+    const width = widthOverride ?? getQualityBadgePlateWidth(key, h, true);
+    const labelColor = colorMode === 'white' ? '#ffffff' : iconMeta.accentColor || '#ffffff';
+    const rect = buildRect(width, labelColor);
+    const labelInset = Math.max(8, Math.round(h * 0.16));
+    const labelSize = fitQualityTextSize(iconMeta.label, Math.round(h * 0.5), Math.max(8, width - labelInset * 2));
+    const labelY = Math.round(h / 2 + labelSize * 0.36);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}" viewBox="0 0 ${width} ${h}">
+${premiumGlowFilter}
+${rect}
+<text x="${width / 2}" y="${labelY}" font-family="${fontFamily}" font-size="${labelSize}" font-weight="800" text-anchor="middle" fill="${labelColor}" filter="url(#premium-glow)">${escapeXml(iconMeta.label)}</text>
 </svg>`;
     return { svg, width, height: h };
   }
