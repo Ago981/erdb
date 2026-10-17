@@ -1220,7 +1220,16 @@ ${plainGroupEnd}
 </svg>`;
 };
 
-export const buildRankingBadgeSvg = (value: string, label: string, iconDataUri?: string | null, noBox = false, scale = 1.0) => {
+export const RANKING_TEXT_FONT_FAMILY = `'Noto Sans','DejaVu Sans',Arial,sans-serif`;
+
+export const buildRankingBadgeSvg = (
+  value: string,
+  label: string,
+  iconDataUri?: string | null,
+  noBox = false,
+  scale = 1.0,
+  measuredTextWidth?: number | null
+) => {
   const height = Math.round(66 * scale);
   const paddingX = Math.round(22 * scale);
   const gap = Math.round(10 * scale);
@@ -1239,7 +1248,13 @@ export const buildRankingBadgeSvg = (value: string, label: string, iconDataUri?:
     // The plate keeps the exact metrics it has always had (28px-based estimate, 66px tall):
     // only the glyphs inside grow, horizontally condensed just enough to stay inside it.
     const plateFontSize = isTextBadge ? Math.round(28 * scale) : rankFontSize;
-    const compactWidth = estimateBadgeTextWidth(value, plateFontSize, false);
+    // The width estimator uses Latin metrics, which are far too wide for Arabic, CJK, Thai or
+    // Indic labels: the caller can pass the real ink width measured at plateFontSize.
+    const textWidthAt = (fontSize: number) =>
+      isTextBadge && measuredTextWidth && measuredTextWidth > 0
+        ? (measuredTextWidth * fontSize) / plateFontSize
+        : estimateBadgeTextWidth(value, fontSize, false);
+    const compactWidth = textWidthAt(plateFontSize);
     const width = Math.ceil(compactWidth + paddingX * 2);
     const textInset = Math.max(8, Math.round(16 * scale));
     const availableTextWidth = Math.max(1, width - textInset * 2);
@@ -1248,23 +1263,25 @@ export const buildRankingBadgeSvg = (value: string, label: string, iconDataUri?:
     if (isTextBadge) {
       while (
         compactFontSize > plateFontSize &&
-        estimateBadgeTextWidth(value, compactFontSize, false) * minTextScaleX > availableTextWidth
+        textWidthAt(compactFontSize) * minTextScaleX > availableTextWidth
       ) {
         compactFontSize -= 1;
       }
     }
-    const fittedTextWidth = estimateBadgeTextWidth(value, compactFontSize, false);
+    const fittedTextWidth = textWidthAt(compactFontSize);
     const textScaleX = isTextBadge ? Math.min(1, availableTextWidth / fittedTextWidth) : 1;
-    const textWidth = Math.round(fittedTextWidth * textScaleX);
-    const rankX = Math.round((width - textWidth) / 2);
     const textY = Math.round(height / 2 + compactFontSize * 0.36);
     const fontStyle = isTextBadge ? 'normal' : 'italic';
     const fontWeight = isTextBadge ? '800' : '500';
     const squeezed = textScaleX < 1;
-    const textX = squeezed ? 0 : rankX;
+    // Anchor on the plate centre: with RTL or non-Latin runs a start anchor plus the width
+    // estimate drifts off-centre. When squeezed the group is already translated, so the text
+    // inside it sits at the group origin.
+    const textAnchorX = width / 2;
+    const textX = squeezed ? 0 : textAnchorX;
     const textBaselineY = squeezed ? 0 : textY;
     const textOpen = squeezed
-      ? `<g transform="translate(${rankX} ${textY}) scale(${textScaleX.toFixed(4)} 1)">`
+      ? `<g transform="translate(${textAnchorX} ${textY}) scale(${textScaleX.toFixed(4)} 1)">`
       : '';
     const textClose = squeezed ? '</g>' : '';
 
@@ -1272,14 +1289,14 @@ export const buildRankingBadgeSvg = (value: string, label: string, iconDataUri?:
       ? Array.from({ length: 8 }, (_, i) => {
         const strokeWidth = 20 - i * 2.5;
         const opacity = 0.05 + (i * 0.05);
-        return `<text x="${textX}" y="${textBaselineY}" font-family="'Noto Sans','DejaVu Sans',Arial,sans-serif" font-size="${compactFontSize}" font-style="${fontStyle}" font-weight="${fontWeight}" fill="none" stroke="rgba(0,0,0,${opacity})" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round" style="font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1;">${escapeXml(value)}</text>`;
+        return `<text x="${textX}" y="${textBaselineY}" font-family="${RANKING_TEXT_FONT_FAMILY}" font-size="${compactFontSize}" font-style="${fontStyle}" font-weight="${fontWeight}" text-anchor="middle" fill="none" stroke="rgba(0,0,0,${opacity})" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round" style="font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1;">${escapeXml(value)}</text>`;
       }).join('\\n')
       : '';
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="-4 -4 ${width + 8} ${height + 8}">
 ${!noBox ? `<rect x="0.75" y="0.75" width="${width - 1.5}" height="${height - 1.5}" rx="20" fill="rgb(21,35,49)" fill-opacity="0.92" stroke="rgba(255,255,255,0.10)" stroke-width="1" />` : ''}
 ${textOpen}${rankGlowLayers}
-<text x="${textX}" y="${textBaselineY}" font-family="'Noto Sans','DejaVu Sans',Arial,sans-serif" font-size="${compactFontSize}" font-style="${fontStyle}" font-weight="${fontWeight}" fill="white" stroke="rgba(0,0,0,0.85)" stroke-width="2.2" paint-order="stroke fill" style="font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1;">${escapeXml(value)}</text>${textClose}
+<text x="${textX}" y="${textBaselineY}" font-family="${RANKING_TEXT_FONT_FAMILY}" font-size="${compactFontSize}" font-style="${fontStyle}" font-weight="${fontWeight}" text-anchor="middle" fill="white" stroke="rgba(0,0,0,0.85)" stroke-width="2.2" paint-order="stroke fill" style="font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1;">${escapeXml(value)}</text>${textClose}
 </svg>`;
     return { svg, width, height };
   }

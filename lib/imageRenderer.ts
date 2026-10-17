@@ -17,6 +17,7 @@ import {
   measureBadgeColumnHeight,
   measureBadgeRowWidth,
   normalizeVerticalBadgeContent,
+  RANKING_TEXT_FONT_FAMILY,
   splitBackdropVerticalBadgesIntoColumns,
   splitPosterBadgesByLayout,
   type BackdropBadgePlacement,
@@ -34,6 +35,7 @@ import {
 } from '@/lib/ratingBadgeLogic';
 import { measurePhase } from '@/lib/routeShared';
 import { findFirstNonOverlappingRect, rectsOverlap, type OverlayRect } from '@/lib/overlayCollision';
+import { measureSvgTextWidth } from '@/lib/textMeasurement';
 import type { FastRenderInput, PhaseDurations, QualityBadgesSide, RenderedImagePayload } from '@/lib/routeTypes';
 export const renderWithSharp = async (
   input: FastRenderInput,
@@ -2113,12 +2115,24 @@ export const renderWithSharp = async (
     if (usePosterLayout && input.rankingBadge) {
       const badge = input.rankingBadge;
       const rankingScale = (input.posterConfiguratorPreset === 'advanced' ? 1.3 : 1.15) * posterOutputScale;
+      // Award/fallback labels are localized, so measure the real text width instead of trusting
+      // the Latin width estimate (keeps Arabic/CJK/Thai labels centred and their plate tight).
+      const rankingIsTextBadge = badge.value.length > 3 && !badge.value.startsWith('#');
+      const measuredRankingTextWidth = rankingIsTextBadge
+        ? await measureSvgTextWidth(
+          badge.value,
+          Math.round(28 * rankingScale),
+          800,
+          RANKING_TEXT_FONT_FAMILY
+        )
+        : null;
       const rankingSpec = buildRankingBadgeSvg(
         badge.value,
         badge.compact ? '' : badge.label,
         null,
         badge.noBox ?? (input.posterConfiguratorPreset === 'simple'),
-        rankingScale
+        rankingScale,
+        measuredRankingTextWidth
       );
       // The ranking SVG carries a 4px bleed around its plate, so its canvas is scaled a touch
       // larger than the plate height we want to see on the poster.
