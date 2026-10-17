@@ -335,7 +335,7 @@ export function WorkspaceModals({ state, actions, derived, isCatalogModalOpen, s
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="relative w-full max-w-3xl overflow-hidden rounded-[28px] border border-white/10 shadow-[0_40px_120px_-60px_rgba(0,0,0,0.9)] flex flex-col max-h-full"
+            className="relative w-full max-w-3xl overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0f16] shadow-[0_40px_120px_-60px_rgba(0,0,0,0.9)] flex flex-col max-h-full"
           >
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 px-5 py-4 shrink-0">
               <div>
@@ -549,7 +549,7 @@ export function WorkspaceModals({ state, actions, derived, isCatalogModalOpen, s
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="relative w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/10 shadow-[0_40px_120px_-60px_rgba(0,0,0,0.9)] flex flex-col max-h-full"
+            className="relative w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0f16] shadow-[0_40px_120px_-60px_rgba(0,0,0,0.9)] flex flex-col max-h-full"
           >
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 px-5 py-4 shrink-0">
               <div>
