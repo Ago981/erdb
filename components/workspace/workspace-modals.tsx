@@ -686,24 +686,6 @@ export function WorkspaceModals({ state, actions, derived, isCatalogModalOpen, s
                     Exact token/config patterns for AiOMetadata. Series and anime should use the same episode provider.
                   </p>
                 </div>
-                <div className="mt-4 rounded-2xl border border-white/10 bg-[#080808]/90 p-3">
-                  <div className="text-[11px] font-semibold text-slate-100">AiOMetadata Series/Anime Provider</div>
-                  <p className="mt-1 text-[10px] text-slate-300">
-                    TVDB can be incorrect when AiOMetadata sends a Kitsu ID in the season slot.
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {AIOMETADATA_EPISODE_PROVIDER_OPTIONS.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => setAiometadataEpisodeProvider(option.id)}
-                        className={`cursor-pointer rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors ${aiometadataEpisodeProvider === option.id ? 'border-orange-500/60 bg-[#121212] text-white' : 'border-white/10 text-slate-100 hover:text-white'}`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
                 <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
                   {([
                     ['poster', 'Poster URL Pattern'],
