@@ -56,10 +56,10 @@ function KeyField({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-100">{label}</span>
         <span
           className={`rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-            value ? 'border-emerald-400/25 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-white/[0.03] text-slate-500'
+            value ? 'border-emerald-400/25 bg-emerald-500/10 text-emerald-300' : 'border-white/10 text-slate-200'
           }`}
         >
           {value ? 'Active' : 'Missing'}
@@ -73,7 +73,7 @@ function KeyField({
         aria-label={label}
         className={INPUT_CLASS}
       />
-      <span className="text-[10px] leading-relaxed text-slate-500">{hint}</span>
+      <span className="text-[10px] leading-relaxed text-slate-200">{hint}</span>
     </div>
   );
 }
@@ -338,11 +338,11 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                     }`}
                   >
                     <span className="flex items-center justify-between gap-2">
-                      <span className={`text-xs font-semibold ${isActive ? 'text-white' : 'text-slate-200'}`}>{preset.name}</span>
+                      <span className={`text-xs font-semibold ${isActive ? 'text-white' : 'text-white'}`}>{preset.name}</span>
                       {isActive && <Check className="h-3.5 w-3.5 shrink-0 text-orange-400" />}
                     </span>
-                    <span className="text-[10px] leading-relaxed text-slate-500">{preset.description}</span>
-                    <span className="text-[10px] leading-relaxed text-slate-600">{preset.summary}</span>
+                    <span className="text-[10px] leading-relaxed text-slate-200">{preset.description}</span>
+                    <span className="text-[10px] leading-relaxed text-slate-300">{preset.summary}</span>
                   </button>
                 );
               })}
@@ -383,7 +383,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                   Add a TMDB key in the API keys section above to load artwork in a specific language.
                 </Notice>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {previewType === 'poster' && !backdropAsPoster ? (
                     <>
                       <Field label="Poster language">{renderLanguage(posterLang, setPosterLang)}</Field>
@@ -410,7 +410,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
         {showImageText && (
           <Section icon={Type} title="Artwork text" hint="Base artwork variant used before badges are drawn.">
             <Card>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Field label="Base artwork">
                   {renderDropdown(activeImageText, setImageTextForType, [
                     { id: 'default', label: 'Default' },
@@ -434,7 +434,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
           </Section>
         )}
 
-        <Section icon={Trophy} title="Ranking" hint="JustWatch popularity rank drawn on the artwork.">
+        <Section icon={Trophy} title="Ranking" hint="JustWatch popularity rank drawn on the artwork." defaultOpen>
 
           {!usesPosterSettings ? (
             <Notice tone="info" title="Posters only">
@@ -442,7 +442,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
             </Notice>
           ) : (
             <Card>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Field label="Interval">{renderDropdown(ranking, setRanking, RANKING_OPTIONS)}</Field>
 
                 <AnimatePresence initial={false}>
@@ -451,11 +451,11 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="space-y-3 overflow-hidden"
+                      className="space-y-2 overflow-hidden"
                     >
                       <Field label="Chart country">
                         <div className="flex items-center gap-2">
-                          <Globe2 className="h-4 w-4 shrink-0 text-slate-500" />
+                          <Globe2 className="h-4 w-4 shrink-0 text-slate-200" />
                           <select
                             value={hasKnownRankingCountry ? normalizedRankingCountry : rankingCountry}
                             onChange={(event) => setRankingCountry(event.target.value)}
@@ -480,7 +480,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                       />
 
                       {posterConfiguratorPreset === 'custom' && (
-                        <div className="space-y-3 border-t border-white/5 pt-3">
+                        <div className="space-y-2 border-t border-white/5 pt-3">
                           <Toggle
                             checked={rankingCompact}
                             onChange={setRankingCompact}
@@ -501,7 +501,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
 
           {usesPosterSettings && (
             <Card>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Toggle
                   checked={posterVignetteEnabled}
                   onChange={setPosterVignetteEnabled}
@@ -520,7 +520,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                 )}
 
                 {posterConfiguratorPreset === 'custom' && (
-                  <div className="space-y-3 border-t border-white/5 pt-3">
+                  <div className="space-y-2 border-t border-white/5 pt-3">
                     <Field label="Ratings position">
                       {renderDropdown(posterRatingsLayout, setPosterRatingsLayout, POSTER_RATING_LAYOUT_OPTIONS)}
                     </Field>
@@ -561,7 +561,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
 
           {previewType === 'backdrop' && (
             <Card>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Field label="Ratings position">
                   {renderDropdown(backdropRatingsLayout, (value) => setBackdropRatingsLayout(value as BackdropRatingLayout), BACKDROP_RATING_LAYOUT_OPTIONS)}
                 </Field>
@@ -590,7 +590,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
 
           {previewType === 'thumbnail' && (
             <Card>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Field label="Ratings position">
                   {renderDropdown(thumbnailRatingsLayout, (value) => setThumbnailRatingsLayout(value as ThumbnailRatingLayout), THUMBNAIL_RATING_LAYOUT_OPTIONS)}
                 </Field>
@@ -612,7 +612,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
 
           {previewType === 'logo' && (
             <Card>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Field label="Logo mode">{renderDropdown(logoMode, setLogoMode, LOGO_MODE_OPTIONS)}</Field>
 
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -621,7 +621,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="space-y-3 overflow-hidden"
+                      className="space-y-2 overflow-hidden"
                     >
                       <Field label="Logo font">
                         {renderDropdown(logoFontVariant, setLogoFontVariant, LOGO_FONT_VARIANT_OPTIONS)}
@@ -692,7 +692,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
 
           {showRatingStyle && (
             <Card title="Rating style">
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {renderDropdown(activeRatingStyle, (value) => setRatingStyleForType(value as RatingStyle), RATING_STYLE_OPTIONS)}
                 {activeRatingStyle === 'glass' && (
                   <Field label="Glass style">
@@ -752,7 +752,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
         >
 
           <Card>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {averageRatingNotice && (
                 <Notice tone="warning" title="Average rating active">
                   {posterConfiguratorPreset === 'preset1'
@@ -778,7 +778,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                 </button>
               </div>
 
-              <p className="text-[10px] text-slate-500">Drag the grips to reorder. Order flows from the first badge to the last.</p>
+              <p className="text-[10px] text-slate-200">Drag the grips to reorder. Order flows from the first badge to the last.</p>
 
               <RatingProviderSortableList
                 rows={ratingProviderRows}

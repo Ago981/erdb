@@ -28,7 +28,7 @@ const logoFonts = LOGO_FONT_VARIANT_OPTIONS.map((option) => option.id).join(', '
 const logoModes = LOGO_MODE_OPTIONS.map((option) => option.id).join(', ');
 
 function Code({ children }: { children: ReactNode }) {
-  return <code className="font-mono text-[12px] text-orange-300">{children}</code>;
+  return <code className="font-mono text-[12px] text-orange-400">{children}</code>;
 }
 
 function Table({ columns, rows }: { columns: string[]; rows: ReactNode[][] }) {
@@ -103,7 +103,7 @@ export default function DocsPage() {
         <div className="space-y-10">
           <section className="space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[10px] uppercase tracking-[0.34em] text-slate-300">
-              <Workflow className="h-3.5 w-3.5 text-orange-300" />
+              <Workflow className="h-3.5 w-3.5 text-orange-400" />
               <span>Dedicated API Docs</span>
             </div>
             <h1 className="max-w-5xl text-4xl leading-tight text-white sm:text-5xl">
@@ -120,7 +120,7 @@ export default function DocsPage() {
             </p>
           </section>
 
-          <Section icon={<Code2 className="h-3.5 w-3.5 text-orange-300" />} title="Public Endpoints" description="Main public surface exposed by the app.">
+          <Section icon={<Code2 className="h-3.5 w-3.5 text-orange-400" />} title="Public Endpoints" description="Main public surface exposed by the app.">
             <Table
               columns={['Method', 'Path', 'Purpose', 'Notes']}
               rows={[
@@ -134,7 +134,7 @@ export default function DocsPage() {
             />
           </Section>
 
-          <Section icon={<ImageIcon className="h-3.5 w-3.5 text-orange-300" />} title="Image Renderer" description="Canonical route: GET /{token}/{type}/{kind}/{id}.jpg">
+          <Section icon={<ImageIcon className="h-3.5 w-3.5 text-orange-400" />} title="Image Renderer" description="Canonical route: GET /{token}/{type}/{kind}/{id}.jpg">
             <div className="rounded-3xl border border-white/10 bg-[#0a0f16]/90 p-5 text-sm leading-7 text-slate-400 mb-4">
               <p>The image renderer no longer relies on query strings. All settings, including API keys, layouts, badges, and providers, are stored in the server database and resolved using the provided token.</p>
             </div>
@@ -195,7 +195,7 @@ GET /Tk-abc123xyz/thumbnail/series/realimdb:tt0944947:1:1.jpg`}</code></pre>
           </Section>
 
           <Section
-            icon={<Bot className="h-3.5 w-3.5 text-orange-300" />}
+            icon={<Bot className="h-3.5 w-3.5 text-orange-400" />}
             title="AI Integration Prompt"
             description="A ready-to-use prompt for wiring ERDB into another addon or media app using the documented config fields and routes."
           >
@@ -214,7 +214,7 @@ GET /Tk-abc123xyz/thumbnail/series/realimdb:tt0944947:1:1.jpg`}</code></pre>
             <pre className="overflow-x-auto rounded-3xl border border-white/10 bg-[#0a0f16]/90 p-5 text-[12px] leading-6 text-slate-200"><code>{ERDB_AI_INTEGRATION_PROMPT}</code></pre>
           </Section>
 
-          <Section icon={<FileJson className="h-3.5 w-3.5 text-orange-300" />} title="Helpers And Headers" description="Useful integration details that are easy to miss when wiring ERDB behind another proxy or CDN.">
+          <Section icon={<FileJson className="h-3.5 w-3.5 text-orange-400" />} title="Helpers And Headers" description="Useful integration details that are easy to miss when wiring ERDB behind another proxy or CDN.">
             <Table
               columns={['Topic', 'Behavior']}
               rows={[
