@@ -154,8 +154,9 @@ export const renderWithSharp = async (
       ? Math.min(input.outputWidth, input.outputHeight)
       : input.outputWidth;
     const posterOutputScale = usePosterLayout ? Math.max(1, posterReferenceSize / 500) : 1;
-    // Quality chips looked tiny next to the rating/ranking badges (flat 40px cap vs a
-    // ~71px rating badge at 500px): keep them around 72% of the rating badge height.
+    // Two constraints from live feedback: the chip (plate) must not look much smaller
+    // than the ranking box (~64px), while the logo inside must not outsize the other
+    // glyphs (~30px). => plate 0.72x the rating badge, artwork inset 16% inside it.
     const posterQualityMaxHeight = usePosterLayout
       ? Math.round(Math.max(40, (input.posterReferenceBadgeHeight ?? badgeHeight) * 0.72))
       : Math.round(40 * posterOutputScale);

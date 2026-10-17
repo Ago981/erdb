@@ -616,6 +616,8 @@ const fitQualityTextSize = (label: string, size: number, boxWidth: number) => {
 
 // Square Dark plate color: the same slate used by the ranking badge box, not pure black.
 export const SQUARE_BADGE_FILL = 'rgba(21,35,49,0.92)';
+// Square Dark border: neutral hairline (same idea as the ranking box), never the provider color.
+export const SQUARE_BADGE_STROKE = 'rgba(255,255,255,0.10)';
 
 // Pill Glass material (Apple-style frosted capsule): neutral smoked (or clear) body,
 // top sheen, light rim and a soft drop shadow. The accent color never tints the
@@ -694,18 +696,18 @@ export const buildQualityBadgeSvg = (
       ? Math.round(h / 2)
       : Math.round(h * 0.18);
   const strokeWidth =
-    style === 'glass'
+    style === 'square'
       ? 1
-      : style === 'square'
-        ? Math.max(1, Math.round(h * 0.05))
+      : style === 'glass'
+        ? 1
         : Math.max(2, Math.round(h * 0.08));
   const innerPadding = Math.max(10, Math.round(h * 0.16));
   const fontFamily = `'Noto Sans','DejaVu Sans','Arial Black',Arial,sans-serif`;
   const baseRect = (width: number, stroke: string, fill: string, extra = '') =>
     `<rect x="${strokeWidth / 2}" y="${strokeWidth / 2}" width="${Math.max(0, width - strokeWidth)}" height="${Math.max(0, h - strokeWidth)}" rx="${radius}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" ${extra}/>`;
-  const resolveChrome = (accentColor: string) => {
+  const resolveChrome = () => {
     if (style === 'plain') return null;
-    return { stroke: accentColor, strokeOpacity: '1', fill: SQUARE_BADGE_FILL };
+    return { stroke: SQUARE_BADGE_STROKE, strokeOpacity: '1', fill: SQUARE_BADGE_FILL };
   };
   const buildRect = (width: number, accentColor: string, extra = '') => {
     if (style === 'plain') return '';
@@ -719,7 +721,7 @@ export const buildQualityBadgeSvg = (
         radius,
       });
     }
-    const chrome = resolveChrome(accentColor);
+    const chrome = resolveChrome();
     if (!chrome) return '';
     return baseRect(width, chrome.stroke, chrome.fill, extra);
   };
@@ -828,10 +830,10 @@ ${content}
     const imageHref = escapeXml(iconDataUri);
     const rectColor = colorMode === 'white' ? '#ffffff' : (iconMeta.accentColor || '#ffffff');
     const rect = isReferencePlain ? '' : buildRect(width, rectColor);
-    // The logo keeps its size; the plate is what grows. Only a small inset is needed,
-    // enough to clear the pill's rounded ends.
-    const imagePaddingY = Math.max(3, Math.round(h * 0.06));
-    const imagePaddingX = Math.max(imagePaddingY + 2, Math.round(width * 0.1));
+    // The plate keeps its size (so it stays comparable to the ranking box) and the logo
+    // floats inside it: 16% vertical, a bit more on the sides for the pill's rounded ends.
+    const imagePaddingY = Math.max(2, Math.round(h * 0.16));
+    const imagePaddingX = Math.max(imagePaddingY, Math.round(width * 0.1));
     const imageWidth = Math.max(1, width - imagePaddingX * 2);
     const imageHeight = Math.max(1, h - imagePaddingY * 2);
 
@@ -887,23 +889,15 @@ ${clipEnd}
     const smallSize = fitQualityTextSize(QUALITY_BADGE_TEXT.hdr.small, Math.round(h * 0.2), textBox);
     const bigY = Math.round(h * 0.57);
     const smallY = Math.round(h * 0.86);
-    const rectBorder = colorMode === 'white' ? '#ffffff' : 'url(#hdrBorder)';
     const nonSquareAccent = colorMode === 'white' ? '#ffffff' : '#ffbe01';
     const smallTextColor = colorMode === 'white' ? '#ffffff' : '#a7f3d0';
     const rect =
       style === 'square'
-        ? baseRect(width, rectBorder, SQUARE_BADGE_FILL)
+        ? baseRect(width, SQUARE_BADGE_STROKE, SQUARE_BADGE_FILL)
         : buildRect(width, nonSquareAccent);
     const clipStart = style === 'glass' ? `<g clip-path="url(#capsule-clip-apple-glass-q-hdr-7)">` : '';
     const clipEnd = style === 'glass' ? '</g>' : '';
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}" viewBox="0 0 ${width} ${h}">
-<defs>
-  <linearGradient id="hdrBorder" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0%" stop-color="#22c55e"/>
-    <stop offset="50%" stop-color="#22d3ee"/>
-    <stop offset="100%" stop-color="#facc15"/>
-  </linearGradient>
-</defs>
 ${rect}
 ${clipStart}
 <text x="${width / 2}" y="${bigY}" font-family="${fontFamily}" font-size="${bigSize}" font-weight="800" text-anchor="middle" fill="white"${universalStroke}>${QUALITY_BADGE_TEXT.hdr.big}</text>
@@ -1118,7 +1112,7 @@ export const buildBadgeSvg = ({
     ratingStyle === 'plain'
       ? ''
       : ratingStyle === 'square'
-        ? `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${outerRadius}" fill="${SQUARE_BADGE_FILL}" stroke="${accentColor}" />`
+        ? `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${outerRadius}" fill="${SQUARE_BADGE_FILL}" stroke="${SQUARE_BADGE_STROKE}" />`
         : buildGlassCapsule({
           id: clipPathId,
           clipId: `capsule-clip-${clipPathId}`,
