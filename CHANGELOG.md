@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.16](https://github.com/realbestia1/erdb/compare/v0.7.15...v0.7.16) - 2026-10-17
+
+- Fix workspace modal backgrounds ([5aa2bf7](https://github.com/realbestia1/erdb/commit/5aa2bf772abd08e91ce0ecb8be47a59fc531d363))
+  Add an opaque dark background to the workspace modals and bump the package version to 0.7.16.
+
 ## [0.7.15](https://github.com/realbestia1/erdb/compare/v0.7.14...v0.7.15) - 2026-10-17
 
 - Refresh workspace UI and rating defaults ([011f930](https://github.com/realbestia1/erdb/commit/011f930764c3239806401cbbd0a7ae227470ef14))
