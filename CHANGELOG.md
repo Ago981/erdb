@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.18](https://github.com/realbestia1/erdb/compare/v0.7.17...v0.7.18) - 2026-10-17
+
+- Use template IDs for AiOMetadata artwork ([68fd704](https://github.com/realbestia1/erdb/commit/68fd704925553aa9495a58bfcef4b14245eeb0c6))
+  Use `{id}`, `{type}`, `{season}`, and `{episode}` placeholders for artwork lookups, remove the episode-provider selector, and bump the package version to 0.7.18.
+
 ## [0.7.17](https://github.com/realbestia1/erdb/compare/v0.7.16...v0.7.17) - 2026-10-17
 
 - Document simplified image URL patterns ([c54dfd0](https://github.com/realbestia1/erdb/commit/c54dfd0ca792f500939d1e3179c191fd8c3a65be))
