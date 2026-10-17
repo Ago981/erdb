@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.14](https://github.com/realbestia1/erdb/compare/v0.7.13...v0.7.14) - 2026-10-17
+
+- Add configurable poster genre chip style ([dbf17d0](https://github.com/realbestia1/erdb/commit/dbf17d0e560fc2982adad9d2fc6d4e2256c853e8))
+  Let users choose the poster genre chip style and color mode, and carry the setting through previews, generated URLs, proxy configuration, and image rendering. Preserve the existing plain style as the default and bump the renderer cache version and package version.
+
 ## [0.7.13](https://github.com/realbestia1/erdb/compare/v0.7.12...v0.7.13) - 2026-10-17
 
 - Improve generated logos for non-Latin scripts ([62fabc5](https://github.com/realbestia1/erdb/commit/62fabc5c3eacc6e0a2a0bc6ce50192dbf633770e))
