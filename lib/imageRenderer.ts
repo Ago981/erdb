@@ -13,6 +13,7 @@ import {
   getBackdropBadgePlacement,
   getMaxBadgeColumnCount,
   getMinimumCompressedBadgeWidth,
+  getQualityBadgePlateWidth,
   measureBadgeColumnHeight,
   measureBadgeRowWidth,
   normalizeVerticalBadgeContent,
@@ -153,8 +154,17 @@ export const renderWithSharp = async (
       ? Math.min(input.outputWidth, input.outputHeight)
       : input.outputWidth;
     const posterOutputScale = usePosterLayout ? Math.max(1, posterReferenceSize / 500) : 1;
-    const posterQualityMaxHeight = Math.round(40 * posterOutputScale);
+    // Quality chips looked tiny next to the rating/ranking badges (flat 40px cap vs a
+    // ~71px rating badge at 500px): keep them around 72% of the rating badge height.
+    const posterQualityMaxHeight = usePosterLayout
+      ? Math.round(Math.max(40, (input.posterReferenceBadgeHeight ?? badgeHeight) * 0.72))
+      : Math.round(40 * posterOutputScale);
     const posterQualityMinHeight = Math.round(28 * posterOutputScale);
+    // Ranking badge keeps its own proportion of the rating badges (used to be an
+    // implicit side effect of the quality cap, which is now taller).
+    const posterRankingTargetHeight = Math.round(
+      (input.posterReferenceBadgeHeight ?? badgeHeight) * 0.9
+    );
     const compactPosterRowText =
       usePosterLayout &&
       input.posterRatingsLayout !== 'left' &&
@@ -1231,13 +1241,8 @@ export const renderWithSharp = async (
       let qualityHeight = Math.min(posterQualityMaxHeight, Math.round(baseHeight ?? qualityBaseHeight));
       let rowGap = qualityBaseGap;
 
-      const getBadgeWidth = (key: StreamBadgeKey, h: number): number => {
-        const iconMeta = STREAM_BADGE_META.get(key);
-        if (iconMeta) {
-          return Math.round(h * (iconMeta.iconWidthRatio ?? Math.max(1.35, 0.72 + iconMeta.label.length * 0.34)));
-        }
-        return Math.round(h * 1.75);
-      };
+      const getBadgeWidth = (key: StreamBadgeKey, h: number): number =>
+        getQualityBadgePlateWidth(key, h, Boolean(iconByProvider.get(key)));
 
       const getBadgeWidths = (h: number) =>
         rowBadges.map((badge) => {
@@ -2120,7 +2125,9 @@ export const renderWithSharp = async (
       const scale = rankingSpec.width > maxWidth ? maxWidth / rankingSpec.width : 1;
       let renderedWidth = Math.round(rankingSpec.width * scale);
       let renderedHeight = Math.round(rankingSpec.height * scale);
-      const targetRankingHeight = Math.round(Math.min(posterQualityMaxHeight, posterReferenceBadgeHeight) * 1.6);
+      // Fixed proportion of the rating badges (0.9x): the ranking must not grow just
+      // because the quality chips got taller.
+      const targetRankingHeight = posterRankingTargetHeight;
       if (renderedHeight > targetRankingHeight) {
         const heightScale = targetRankingHeight / renderedHeight;
         renderedWidth = Math.round(renderedWidth * heightScale);

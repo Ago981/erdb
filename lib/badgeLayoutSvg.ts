@@ -134,11 +134,9 @@ export const estimateBadgeWidth = (
   const isStackedStarPromotion = isStacked && value.includes('★');
   const displayValue = isStackedStarPromotion ? value.replace('★ ', '').replace('★', '').trim() : value;
   const textWidth = estimateBadgeTextWidth(displayValue, fontSize, compactText, isStacked);
-  // Badges without an icon (e.g. the average rating "Genre ★ value") have nothing but text
-  // against the plate edge, so they get the full paddingX: with 0.7x the text sat ~4px from
-  // the border in Square Dark while the vertical padding was ~17px.
-  const outerPadding =
-    iconSize > 0 ? Math.max(6, Math.round(paddingX * 0.7)) : Math.max(6, Math.round(paddingX));
+  // Content must keep a real inset from the plate edge: the earlier 0.7x chrome left
+  // ~4px next to the border while the vertical padding was ~17px.
+  const outerPadding = Math.max(6, Math.round(paddingX));
   const innerGap = outerPadding;
   if (contentLayout === 'stacked') {
     return Math.max(
@@ -178,8 +176,7 @@ export const getMinimumCompressedBadgeWidth = (
   compactText = false,
   contentLayout: 'standard' | 'stacked' = 'standard'
 ) => {
-  const outerPadding =
-    iconSize > 0 ? Math.max(6, Math.round(paddingX * 0.7)) : Math.max(6, Math.round(paddingX));
+  const outerPadding = Math.max(6, Math.round(paddingX));
   if (contentLayout === 'stacked') {
     return Math.max(outerPadding * 2 + iconSize, outerPadding * 2 + Math.round(fontSize * (compactText ? 0.82 : 0.92)));
   }
@@ -555,6 +552,68 @@ export const getBadgeOuterRadius = (height: number, ratingStyle: RatingStyle) =>
 export const getBadgeIconRadius = (iconSize: number, ratingStyle: RatingStyle) =>
   ratingStyle === 'square' ? Math.max(6, Math.round(iconSize * 0.22)) : Math.round(iconSize / 2);
 
+// Quality badge labels drawn as text (the icon variants use their own artwork).
+const QUALITY_BADGE_TEXT = {
+  '4k': { big: '4K', small: 'ULTRA HD' },
+  hdr: { big: 'HDR', small: 'TRUE COLOR' },
+  dolbyvision: { top: 'DOLBY', bottom: 'VISION' },
+  remux: { big: 'REMUX' },
+} as const;
+
+const qualityTextSize = (height: number, key: '4k' | 'hdr' | 'dolbyvision' | 'remux', line: 'big' | 'small' | 'top' | 'bottom') => {
+  if (key === '4k') return line === 'big' ? Math.round(height * 0.56) : Math.round(height * 0.2);
+  if (key === 'hdr') return line === 'big' ? Math.round(height * 0.5) : Math.round(height * 0.2);
+  if (key === 'dolbyvision') return line === 'top' ? Math.round(height * 0.22) : Math.round(height * 0.42);
+  return Math.round(height * 0.42);
+};
+
+const qualityMetaTextSize = (height: number, label: string) =>
+  Math.max(12, Math.round(height * (label.length > 6 ? 0.32 : 0.42)));
+
+// librsvg ignores textLength, so the label is never stretched to fill the plate:
+// measure it and keep it inside the plate minus a real inset.
+export const getQualityBadgeTextWidth = (key: StreamBadgeKey, height: number) => {
+  const h = Math.max(32, height);
+  if (key === '4k' || key === 'hdr') {
+    const lines = QUALITY_BADGE_TEXT[key];
+    return Math.max(
+      estimateBadgeTextWidth(lines.big, qualityTextSize(h, key, 'big')),
+      estimateBadgeTextWidth(lines.small, qualityTextSize(h, key, 'small'))
+    );
+  }
+  if (key === 'dolbyvision') {
+    return Math.max(
+      estimateBadgeTextWidth(QUALITY_BADGE_TEXT.dolbyvision.top, qualityTextSize(h, key, 'top')),
+      estimateBadgeTextWidth(QUALITY_BADGE_TEXT.dolbyvision.bottom, qualityTextSize(h, key, 'bottom'))
+    );
+  }
+  if (key === 'remux') {
+    return estimateBadgeTextWidth(QUALITY_BADGE_TEXT.remux.big, qualityTextSize(h, key, 'big'));
+  }
+  const label = STREAM_BADGE_META.get(key)?.label ?? '';
+  return estimateBadgeTextWidth(label, qualityMetaTextSize(h, label));
+};
+
+// Plate width for a quality badge: the icon artwork dictates its own aspect ratio,
+// a text-only badge only needs to fit its label plus the plate inset.
+export const getQualityBadgePlateWidth = (key: StreamBadgeKey, height: number, hasIcon = false) => {
+  const h = Math.max(32, height);
+  const meta = STREAM_BADGE_META.get(key);
+  const aspect = meta?.iconWidthRatio ?? Math.max(1.35, 0.72 + (meta?.label.length ?? 2) * 0.34);
+  const iconWidth = Math.round(h * aspect);
+  // Icons keep their size: the plate grows a bit so the artwork never sits on the border.
+  if (hasIcon) return iconWidth + Math.round(h * 0.16);
+  const inset = Math.max(10, Math.round(h * 0.18));
+  return Math.min(iconWidth, Math.max(Math.round(h * 1.15), Math.round(getQualityBadgeTextWidth(key, h) + inset * 2)));
+};
+
+// Shrink-only auto-fit: the label never overflows (or gets clipped by) the plate.
+const fitQualityTextSize = (label: string, size: number, boxWidth: number) => {
+  const natural = estimateBadgeTextWidth(label, size);
+  if (natural <= boxWidth) return size;
+  return Math.max(8, Math.floor((size * boxWidth) / Math.max(1, natural)));
+};
+
 // Square Dark plate color: the same slate used by the ranking badge box, not pure black.
 export const SQUARE_BADGE_FILL = 'rgba(21,35,49,0.92)';
 
@@ -765,12 +824,14 @@ ${content}
 
   const iconMeta = STREAM_BADGE_META.get(key);
   if (iconMeta && iconDataUri) {
-    const width = widthOverride ?? Math.round(h * (iconMeta.iconWidthRatio ?? Math.max(1.35, 0.72 + iconMeta.label.length * 0.34)));
+    const width = widthOverride ?? getQualityBadgePlateWidth(key, h, true);
     const imageHref = escapeXml(iconDataUri);
     const rectColor = colorMode === 'white' ? '#ffffff' : (iconMeta.accentColor || '#ffffff');
     const rect = isReferencePlain ? '' : buildRect(width, rectColor);
-    const imagePaddingX = Math.max(2, Math.round(h * 0.04));
-    const imagePaddingY = Math.max(2, Math.round(h * 0.04));
+    // The logo keeps its size; the plate is what grows. Only a small inset is needed,
+    // enough to clear the pill's rounded ends.
+    const imagePaddingY = Math.max(3, Math.round(h * 0.06));
+    const imagePaddingX = Math.max(imagePaddingY + 2, Math.round(width * 0.1));
     const imageWidth = Math.max(1, width - imagePaddingX * 2);
     const imageHeight = Math.max(1, h - imagePaddingY * 2);
 
@@ -787,15 +848,16 @@ ${rect}
   }
 
   if (key === '4k') {
-    const width = widthOverride ?? Math.round(h * 1.3);
+    const width = widthOverride ?? getQualityBadgePlateWidth(key, h, false);
     if (isReferencePlain) {
       const bigSize = Math.round(h * 0.46);
       const bigY = Math.round(h * 0.64);
-      const content = generateGlowText(`x="${width / 2}" y="${bigY}" font-family="${fontFamily}" font-size="${bigSize}" font-weight="900" text-anchor="middle"`, '4K');
+      const content = generateGlowText(`x="${width / 2}" y="${bigY}" font-family="${fontFamily}" font-size="${bigSize}" font-weight="900" text-anchor="middle"`, QUALITY_BADGE_TEXT['4k'].big);
       return { svg: wrapSvgPadded(content, width, h), width, height: h, isPadded: true };
     }
-    const bigSize = Math.round(h * 0.56);
-    const smallSize = Math.round(h * 0.2);
+    const textBox = Math.max(8, width - innerPadding * 2);
+    const bigSize = fitQualityTextSize(QUALITY_BADGE_TEXT['4k'].big, Math.round(h * 0.56), textBox);
+    const smallSize = fitQualityTextSize(QUALITY_BADGE_TEXT['4k'].small, Math.round(h * 0.2), textBox);
     const bigY = Math.round(h * 0.58);
     const smallY = Math.round(h * 0.86);
     const color = colorMode === 'white' ? '#ffffff' : '#f7c948';
@@ -805,23 +867,24 @@ ${rect}
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}" viewBox="0 0 ${width} ${h}">
 ${rect}
 ${clipStart}
-<text x="${width / 2}" y="${bigY}" font-family="${fontFamily}" font-size="${bigSize}" font-weight="800" text-anchor="middle" fill="${color}"${universalStroke}>4K</text>
-<text x="${width / 2}" y="${smallY}" font-family="${fontFamily}" font-size="${smallSize}" font-weight="700" text-anchor="middle" fill="${color}" letter-spacing="0.06em"${universalStroke}>ULTRA HD</text>
+<text x="${width / 2}" y="${bigY}" font-family="${fontFamily}" font-size="${bigSize}" font-weight="800" text-anchor="middle" fill="${color}"${universalStroke}>${QUALITY_BADGE_TEXT['4k'].big}</text>
+<text x="${width / 2}" y="${smallY}" font-family="${fontFamily}" font-size="${smallSize}" font-weight="700" text-anchor="middle" fill="${color}" letter-spacing="0.06em"${universalStroke}>${QUALITY_BADGE_TEXT['4k'].small}</text>
 ${clipEnd}
 </svg>`;
     return { svg, width, height: h };
   }
 
   if (key === 'hdr') {
-    const width = widthOverride ?? Math.round(h * 1.45);
+    const width = widthOverride ?? getQualityBadgePlateWidth(key, h, false);
     if (isReferencePlain) {
       const textSize = Math.round(h * 0.46);
       const textY = Math.round(h * 0.64);
-      const content = generateGlowText(`x="${width / 2}" y="${textY}" font-family="${fontFamily}" font-size="${textSize}" font-weight="900" text-anchor="middle"`, 'HDR');
+      const content = generateGlowText(`x="${width / 2}" y="${textY}" font-family="${fontFamily}" font-size="${textSize}" font-weight="900" text-anchor="middle"`, QUALITY_BADGE_TEXT.hdr.big);
       return { svg: wrapSvgPadded(content, width, h), width, height: h, isPadded: true };
     }
-    const bigSize = Math.round(h * 0.5);
-    const smallSize = Math.round(h * 0.2);
+    const textBox = Math.max(8, width - innerPadding * 2);
+    const bigSize = fitQualityTextSize(QUALITY_BADGE_TEXT.hdr.big, Math.round(h * 0.5), textBox);
+    const smallSize = fitQualityTextSize(QUALITY_BADGE_TEXT.hdr.small, Math.round(h * 0.2), textBox);
     const bigY = Math.round(h * 0.57);
     const smallY = Math.round(h * 0.86);
     const rectBorder = colorMode === 'white' ? '#ffffff' : 'url(#hdrBorder)';
@@ -843,51 +906,51 @@ ${clipEnd}
 </defs>
 ${rect}
 ${clipStart}
-<text x="${width / 2}" y="${bigY}" font-family="${fontFamily}" font-size="${bigSize}" font-weight="800" text-anchor="middle" fill="white"${universalStroke}>HDR</text>
-<text x="${width / 2}" y="${smallY}" font-family="${fontFamily}" font-size="${smallSize}" font-weight="700" text-anchor="middle" fill="${smallTextColor}" letter-spacing="0.05em"${universalStroke}>TRUE COLOR</text>
+<text x="${width / 2}" y="${bigY}" font-family="${fontFamily}" font-size="${bigSize}" font-weight="800" text-anchor="middle" fill="white"${universalStroke}>${QUALITY_BADGE_TEXT.hdr.big}</text>
+<text x="${width / 2}" y="${smallY}" font-family="${fontFamily}" font-size="${smallSize}" font-weight="700" text-anchor="middle" fill="${smallTextColor}" letter-spacing="0.05em"${universalStroke}>${QUALITY_BADGE_TEXT.hdr.small}</text>
 ${clipEnd}
 </svg>`;
     return { svg, width, height: h };
   }
 
   if (key === 'dolbyvision') {
-    const width = widthOverride ?? Math.round(h * 1.7);
+    const width = widthOverride ?? getQualityBadgePlateWidth(key, h, false);
     if (isReferencePlain) {
       const topSize = Math.round(h * 0.24);
       const bottomSize = Math.round(h * 0.34);
       const topY = Math.round(h * 0.35);
       const bottomY = Math.round(h * 0.78);
-      const content = `${generateGlowText(`x="${width / 2}" y="${topY}" font-family="${fontFamily}" font-size="${topSize}" font-weight="900" text-anchor="middle"`, 'DOLBY')}
-${generateGlowText(`x="${width / 2}" y="${bottomY}" font-family="${fontFamily}" font-size="${bottomSize}" font-weight="900" text-anchor="middle" letter-spacing="0.04em"`, 'VISION')}`;
+      const content = `${generateGlowText(`x="${width / 2}" y="${topY}" font-family="${fontFamily}" font-size="${topSize}" font-weight="900" text-anchor="middle"`, QUALITY_BADGE_TEXT.dolbyvision.top)}
+${generateGlowText(`x="${width / 2}" y="${bottomY}" font-family="${fontFamily}" font-size="${bottomSize}" font-weight="900" text-anchor="middle" letter-spacing="0.04em"`, QUALITY_BADGE_TEXT.dolbyvision.bottom)}`;
       return { svg: wrapSvgPadded(content, width, h), width, height: h, isPadded: true };
     }
-    const topSize = Math.round(h * 0.22);
-    const bottomSize = Math.round(h * 0.42);
+    const textBox = Math.max(8, width - innerPadding * 2);
+    const topSize = fitQualityTextSize(QUALITY_BADGE_TEXT.dolbyvision.top, Math.round(h * 0.22), textBox);
+    const bottomSize = fitQualityTextSize(QUALITY_BADGE_TEXT.dolbyvision.bottom, Math.round(h * 0.42), textBox);
     const topY = Math.round(h * 0.36);
     const bottomY = Math.round(h * 0.73);
-    const textLength = Math.max(40, Math.floor(width - innerPadding * 2));
     const rect = buildRect(width, '#ffffff');
     const clipStart = style === 'glass' ? `<g clip-path="url(#capsule-clip-apple-glass-q-dolbyvision-7)">` : '';
     const clipEnd = style === 'glass' ? '</g>' : '';
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}" viewBox="0 0 ${width} ${h}">
 ${rect}
 ${clipStart}
-<text x="${width / 2}" y="${topY}" font-family="${fontFamily}" font-size="${topSize}" font-weight="700" text-anchor="middle" fill="#ffffff" letter-spacing="0.18em" textLength="${textLength}" lengthAdjust="spacingAndGlyphs"${universalStroke}>DOLBY</text>
-<text x="${width / 2}" y="${bottomY}" font-family="${fontFamily}" font-size="${bottomSize}" font-weight="800" text-anchor="middle" fill="#ffffff" textLength="${textLength}" lengthAdjust="spacingAndGlyphs"${universalStroke}>VISION</text>
+<text x="${width / 2}" y="${topY}" font-family="${fontFamily}" font-size="${topSize}" font-weight="700" text-anchor="middle" fill="#ffffff" letter-spacing="0.18em"${universalStroke}>${QUALITY_BADGE_TEXT.dolbyvision.top}</text>
+<text x="${width / 2}" y="${bottomY}" font-family="${fontFamily}" font-size="${bottomSize}" font-weight="800" text-anchor="middle" fill="#ffffff"${universalStroke}>${QUALITY_BADGE_TEXT.dolbyvision.bottom}</text>
 ${clipEnd}
 </svg>`;
     return { svg, width, height: h };
   }
 
   if (key === 'remux') {
-    const width = widthOverride ?? Math.round(h * 1.5);
+    const width = widthOverride ?? getQualityBadgePlateWidth(key, h, false);
     if (isReferencePlain) {
       const textSize = Math.round(h * 0.42);
       const textY = Math.round(h * 0.63);
-      const content = generateGlowText(`x="${width / 2}" y="${textY}" font-family="${fontFamily}" font-size="${textSize}" font-weight="900" text-anchor="middle"`, 'REMUX');
+      const content = generateGlowText(`x="${width / 2}" y="${textY}" font-family="${fontFamily}" font-size="${textSize}" font-weight="900" text-anchor="middle"`, QUALITY_BADGE_TEXT.remux.big);
       return { svg: wrapSvgPadded(content, width, h), width, height: h, isPadded: true };
     }
-    const textSize = Math.round(h * 0.42);
+    const textSize = fitQualityTextSize(QUALITY_BADGE_TEXT.remux.big, Math.round(h * 0.42), width - innerPadding * 2);
     const textY = Math.round(h * 0.63);
     const color = colorMode === 'white' ? '#ffffff' : '#27c04f';
     const rect = buildRect(width, color);
@@ -896,7 +959,7 @@ ${clipEnd}
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}" viewBox="0 0 ${width} ${h}">
 ${rect}
 ${clipStart}
-<text x="${width / 2}" y="${textY}" font-family="${fontFamily}" font-size="${textSize}" font-weight="800" text-anchor="middle" fill="${color}" letter-spacing="0.08em"${universalStroke}>REMUX</text>
+<text x="${width / 2}" y="${textY}" font-family="${fontFamily}" font-size="${textSize}" font-weight="800" text-anchor="middle" fill="${color}" letter-spacing="0.08em"${universalStroke}>${QUALITY_BADGE_TEXT.remux.big}</text>
 ${clipEnd}
 </svg>`;
     return { svg, width, height: h };
@@ -905,8 +968,8 @@ ${clipEnd}
   const meta = STREAM_BADGE_META.get(key);
   if (meta) {
     const label = escapeXml(meta.label);
-    const width = widthOverride ?? Math.max(Math.round(h * 1.35), Math.round(h * (0.72 + label.length * 0.34)));
-    const textSize = Math.max(12, Math.round(h * (label.length > 6 ? 0.32 : 0.42)));
+    const width = widthOverride ?? getQualityBadgePlateWidth(key, h, false);
+    const textSize = fitQualityTextSize(meta.label, qualityMetaTextSize(h, meta.label), width - innerPadding * 2);
     const textY = Math.round(h * 0.63);
     if (isReferencePlain) {
       const content = generateGlowText(`x="${width / 2}" y="${textY}" font-family="${fontFamily}" font-size="${textSize}" font-weight="900" text-anchor="middle"`, label);
@@ -919,7 +982,7 @@ ${clipEnd}
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}" viewBox="0 0 ${width} ${h}">
 ${rect}
 ${clipStart}
-<text x="${width / 2}" y="${textY}" font-family="${fontFamily}" font-size="${textSize}" font-weight="800" text-anchor="middle" fill="${accentColor}" textLength="${Math.max(20, width - innerPadding * 2)}" lengthAdjust="spacingAndGlyphs"${universalStroke}>${label}</text>
+<text x="${width / 2}" y="${textY}" font-family="${fontFamily}" font-size="${textSize}" font-weight="800" text-anchor="middle" fill="${accentColor}"${universalStroke}>${label}</text>
 ${clipEnd}
 </svg>`;
     return { svg, width, height: h };
@@ -985,11 +1048,8 @@ export const buildBadgeSvg = ({
       : radius;
   const iconRadius = getBadgeIconRadius(iconSize, ratingStyle);
   const hideIcon = !iconDataUri && monogram === '';
-  // Icon-less badges (average rating) get the full paddingX on the sides,
-  // mirroring estimateBadgeWidth so the plate and the text stay in sync.
-  const outerPadding = hideIcon
-    ? Math.max(6, Math.round(paddingX))
-    : Math.max(6, Math.round(paddingX * 0.7));
+  // Kept in sync with estimateBadgeWidth: the plate always reserves the full paddingX.
+  const outerPadding = Math.max(6, Math.round(paddingX));
   const innerGap = contentLayout === 'stacked' ? Math.max(4, Math.round(outerPadding * 0.65)) : outerPadding;
   const iconX =
     contentLayout === 'stacked'
