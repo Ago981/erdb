@@ -35,7 +35,7 @@ export function PanelHeader({
       </div>
       <div className="min-w-0 flex-1">
         <h2 className="truncate text-sm font-semibold text-white">{title}</h2>
-        {subtitle && <p className="mt-0.5 truncate text-[11px] text-slate-200">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 truncate text-[11px] text-slate-400">{subtitle}</p>}
       </div>
       {actions}
     </div>
@@ -143,7 +143,7 @@ export function Field({
     <label className={`flex flex-col gap-1 ${className ?? ''}`}>
       <span className="mono-label">{label}</span>
       {children}
-      {hint && <span className="text-[10px] leading-relaxed text-slate-200">{hint}</span>}
+      {hint && <span className="text-[10px] leading-relaxed text-slate-400">{hint}</span>}
     </label>
   );
 }
@@ -173,12 +173,12 @@ export function Toggle({
         aria-checked={checked}
         aria-label={label}
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full p-[3px] transition-colors focus-visible:ring-2 focus-visible:ring-orange-400/50 focus-visible:outline-none ${checked ? 'bg-orange-500/80' : 'bg-white/10'}`}
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-[2px] transition-colors focus-visible:ring-2 focus-visible:ring-orange-400/50 focus-visible:outline-none ${checked ? 'bg-orange-500/80' : 'bg-white/10'}`}
       >
         <motion.span
-          animate={{ x: checked ? 16 : 0 }}
+          animate={{ x: checked ? 20 : 0 }}
           transition={{ type: 'spring', stiffness: 520, damping: 26, mass: 0.6 }}
-          className="block h-3.5 w-3.5 rounded-full bg-white"
+          className="block h-5 w-5 rounded-full bg-white shadow-sm"
         />
       </button>
     </div>
@@ -239,11 +239,12 @@ export function NumberStepper({
         value={value ?? ''}
         onChange={(event) => onChange(event.target.value === '' ? null : parseInt(event.target.value, 10))}
         placeholder={placeholder}
-        className="w-24 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs text-white outline-none transition focus:border-orange-400/50"
+        className="h-9 w-24 rounded-xl border border-white/10 bg-white/[0.04] px-2.5 text-xs text-white outline-none transition focus:border-orange-400/50 focus-visible:ring-2 focus-visible:ring-orange-400/40"
       />
       <button
         type="button"
         onClick={onReset}
+        aria-label="Reset to auto"
         className="cursor-pointer rounded-xl border border-white/5 px-2.5 py-1.5 text-xs font-semibold text-slate-100 transition-colors hover:bg-[#121212] hover:text-white"
       >
         Auto

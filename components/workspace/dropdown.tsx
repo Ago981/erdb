@@ -23,6 +23,19 @@ export function Dropdown<T extends string>({ value, onChange, options, className
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  // Escape closes the list and returns focus to the trigger, otherwise keyboard users lose their place.
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        btnRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [open]);
+
   const toggle = () => {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
@@ -50,10 +63,10 @@ export function Dropdown<T extends string>({ value, onChange, options, className
       exit={{ opacity: 0, y: -6, scaleY: 0.95 }}
       transition={{ duration: 0.15, ease: 'easeOut' }}
       style={{ transformOrigin: 'top', ...menuStyle }}
-      className="overflow-hidden rounded-xl border border-white/10 bg-[#0d0f14] shadow-2xl">
+      className="overflow-hidden rounded-xl border border-white/10 bg-[#0d0f14] shadow-2xl" role="listbox">
       <div className="max-h-[50vh] overflow-y-auto">
         {options.map(opt => (
-          <button key={opt.id} type="button" onClick={() => { onChange(opt.id); setOpen(false); }}
+          <button key={opt.id} type="button" role="option" aria-selected={value === opt.id} onClick={() => { onChange(opt.id); setOpen(false); btnRef.current?.focus(); }}
             className={`w-full px-2.5 py-1.5 text-left text-sm transition-colors duration-150 truncate ${value === opt.id ? 'bg-orange-500/15 text-orange-300' : 'text-slate-100 hover:bg-white/[0.06] hover:text-white'}`}>
             {opt.label}
           </button>
@@ -64,8 +77,8 @@ export function Dropdown<T extends string>({ value, onChange, options, className
 
   return (
     <div ref={ref} className="relative" style={width ? { width, minWidth: width } : undefined}>
-      <button ref={btnRef} type="button" onClick={toggle} style={width ? { width, minWidth: width } : undefined}
-        className={`flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-sm font-medium text-white  outline-none transition-all duration-200 hover:border-orange-400/40 hover:bg-white/[0.07] hover:shadow-[0_0_12px_-4px_rgba(249,115,22,0.2)] ${className ?? 'w-full h-9'}`}>
+      <button ref={btnRef} type="button" onClick={toggle} aria-haspopup="listbox" aria-expanded={open} style={width ? { width, minWidth: width } : undefined}
+        className={`flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-sm font-medium text-white  outline-none transition-all duration-200 hover:border-orange-400/40 hover:bg-white/[0.07] hover:shadow-[0_0_12px_-4px_rgba(249,115,22,0.2)] focus-visible:ring-2 focus-visible:ring-orange-400/50 ${className ?? 'w-full h-9'}`}>
         <span className="truncate">{options.find(o => o.id === value)?.label || value}</span>
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
           <ChevronDown className="h-3.5 w-3.5 text-slate-100" />

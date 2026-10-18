@@ -51,7 +51,7 @@ function Step({
         </span>
         <div className="min-w-0">
           <h3 className="text-xs font-semibold text-white">{title}</h3>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-200">{description}</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{description}</p>
         </div>
       </div>
       <div className="pl-9">{children}</div>
@@ -222,7 +222,7 @@ export function WorkspaceProxyPanel({ state, derived, actions, onOpenCatalogModa
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-[10px] leading-relaxed text-slate-200">
+              <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
                 Metadata provider used to resolve series and episode entries.
               </p>
             </Card>
@@ -260,7 +260,7 @@ export function WorkspaceProxyPanel({ state, derived, actions, onOpenCatalogModa
             >
               Translate addon metadata
             </button>
-            <p className="text-[10px] leading-relaxed text-slate-200">
+            <p className="text-[10px] leading-relaxed text-slate-400">
               Injects the selected language into plots, titles and episodes directly into the stream metadata.
             </p>
           </div>

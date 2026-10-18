@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   DndContext,
@@ -240,6 +240,18 @@ export function WorkspaceModals({ state, actions, derived, isCatalogModalOpen, s
   const [rotatedNewToken, setRotatedNewToken] = useState('');
   const [rotateCopied, setRotateCopied] = useState(false);
 
+  // Escape closes whichever modal is open (all three live in this component).
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (isRotateModalOpen) setIsRotateModalOpen(false);
+      else if (isAiometadataModalOpen) setIsAiometadataModalOpen(false);
+      else if (isCatalogModalOpen) setIsCatalogModalOpen(false);
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [isRotateModalOpen, isAiometadataModalOpen, isCatalogModalOpen, setIsRotateModalOpen, setIsAiometadataModalOpen, setIsCatalogModalOpen]);
+
   const handleRotateToken = async () => {
     if (!rotatePassword) {
       setRotateStatus('error');
@@ -321,7 +333,7 @@ export function WorkspaceModals({ state, actions, derived, isCatalogModalOpen, s
   return (
     <AnimatePresence>
       {isCatalogModalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center px-4 py-6">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center px-4 py-6" role="dialog" aria-modal="true">
           <motion.div
             variants={backdropVariants}
             initial="hidden"
@@ -535,7 +547,7 @@ export function WorkspaceModals({ state, actions, derived, isCatalogModalOpen, s
       )}
 
       {isAiometadataModalOpen && (
-        <div className="fixed inset-0 z-[81] flex items-center justify-center px-4 py-6">
+        <div className="fixed inset-0 z-[81] flex items-center justify-center px-4 py-6" role="dialog" aria-modal="true">
           <motion.div
             variants={backdropVariants}
             initial="hidden"
@@ -735,7 +747,7 @@ export function WorkspaceModals({ state, actions, derived, isCatalogModalOpen, s
       )}
 
       {isRotateModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <motion.div
             variants={backdropVariants}
             initial="hidden"

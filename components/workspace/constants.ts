@@ -149,9 +149,9 @@ export const PRESET_CONTROLS_NOTE =
   'Presets lock ratings position, badge placement, ranking position and vignette. Choose Custom to unlock them.';
 
 export const INPUT_CLASS =
-  'w-full rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-white  outline-none transition duration-200 placeholder:text-slate-600 focus:border-orange-400/50 focus:bg-white/[0.03] focus:shadow-[0_0_0_1px_rgba(249,115,22,0.16)]';
+  'h-9 w-full rounded-lg border border-white/10 px-2.5 text-xs text-white  outline-none transition duration-200 placeholder:text-slate-600 focus:border-orange-400/50 focus:bg-white/[0.03] focus-visible:ring-2 focus-visible:ring-orange-400/40 focus:shadow-[0_0_0_1px_rgba(249,115,22,0.16)]';
 export const INPUT_COMPACT_CLASS =
-  'rounded-lg border border-white/10 px-2 py-1 text-xs text-white  outline-none transition duration-200 placeholder:text-slate-600 focus:border-orange-400/50 focus:bg-white/[0.03]';
+  'rounded-lg border border-white/10 px-2 py-1 text-xs text-white  outline-none transition duration-200 placeholder:text-slate-600 focus:border-orange-400/50 focus:bg-white/[0.03] focus-visible:ring-2 focus-visible:ring-orange-400/40';
 
 export const PANEL_CLASS =
   'relative flex min-h-0 flex-col overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.02] shadow-[0_34px_100px_-60px_rgba(0,0,0,1)]';

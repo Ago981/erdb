@@ -173,7 +173,7 @@ function MediaIdSearch({
         {inputValue && (
           <button
             onClick={handleClear}
-            className="absolute right-7 flex h-5 w-5 cursor-pointer items-center justify-center rounded-md text-slate-200 transition hover:text-slate-100"
+            className="absolute right-7 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-slate-200 transition hover:text-slate-100"
             tabIndex={-1}
             title="Clear"
           >
@@ -183,7 +183,7 @@ function MediaIdSearch({
         <button
           onClick={handleSearchIconClick}
           disabled={!tmdbKey}
-          className={`absolute right-1.5 flex h-5 w-5 items-center justify-center rounded-md transition ${tmdbKey ? 'cursor-pointer text-slate-100 hover:text-orange-300' : 'cursor-not-allowed text-slate-300'}`}
+          className={`absolute right-1.5 flex h-6 w-6 items-center justify-center rounded-md transition ${tmdbKey ? 'cursor-pointer text-slate-100 hover:text-orange-300' : 'cursor-not-allowed text-slate-300'}`}
           tabIndex={-1}
           title={tmdbKey ? 'Search by title' : 'Add a TMDB key to enable title search'}
         >
