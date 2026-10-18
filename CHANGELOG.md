@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.19](https://github.com/realbestia1/erdb/compare/v0.7.18...v0.7.19) - 2026-10-18
+
+- Restore glass rating style as default ([50e009e](https://github.com/realbestia1/erdb/commit/50e009e90eca363a4e8645200a0cdb95816f3333))
+  Make Pill Glass an available rating style and set it as the default for ratings and quality badges. Bump the package version to 0.7.19.
+
 ## [0.7.18](https://github.com/realbestia1/erdb/compare/v0.7.17...v0.7.18) - 2026-10-17
 
 - Use template IDs for AiOMetadata artwork ([68fd704](https://github.com/realbestia1/erdb/commit/68fd704925553aa9495a58bfcef4b14245eeb0c6))
