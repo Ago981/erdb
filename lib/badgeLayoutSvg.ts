@@ -713,56 +713,12 @@ export const buildQualityBadgeSvg = (
   const universalStroke = ' stroke="rgba(0,0,0,0.80)" stroke-width="1.8" paint-order="stroke fill"';
   const qualityBadgeColor = '#ffffff';
 
-  const textShadowFilter = `
-    <filter id="text-shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="1.8" result="blur" />
-      <feOffset dx="0" dy="1.2" in="blur" result="offsetBlur" />
-      <feComponentTransfer in="offsetBlur" result="shadow">
-        <feFuncA type="linear" slope="0.85" />
-      </feComponentTransfer>
-      <feMerge>
-        <feMergeNode in="shadow" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-  `.trim();
+  // Shadows removed on purpose: no text-shadow filter at all, the glyphs keep only
+  // their crisp black outline for legibility.
+  const textShadowFilter = '';
 
-  const premiumGlowFilter = `
-    <filter id="premium-glow" x="-50%" y="-50%" width="200%" height="200%">
-      <!-- Wide ambient shadow -->
-      <feGaussianBlur in="SourceAlpha" stdDeviation="6.5" result="blurWide" />
-      <feComponentTransfer in="blurWide" result="glowWide">
-        <feFuncA type="linear" slope="1.2" />
-      </feComponentTransfer>
-
-      <!-- Medium soft shadow -->
-      <feGaussianBlur in="SourceAlpha" stdDeviation="3.6" result="blurMed" />
-      <feComponentTransfer in="blurMed" result="glowMed">
-        <feFuncA type="linear" slope="2.0" />
-      </feComponentTransfer>
-
-      <!-- Core dark shadow -->
-      <feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="blurCore" />
-      <feComponentTransfer in="blurCore" result="glowCore">
-        <feFuncA type="linear" slope="3.0" />
-      </feComponentTransfer>
-
-      <!-- Sharp drop shadow for depth -->
-      <feGaussianBlur in="SourceAlpha" stdDeviation="0.8" result="blurSharp" />
-      <feOffset dx="0" dy="1.5" in="blurSharp" result="offsetSharp" />
-      <feComponentTransfer in="offsetSharp" result="shadowSharp">
-        <feFuncA type="linear" slope="3.0" />
-      </feComponentTransfer>
-
-      <feMerge>
-        <feMergeNode in="glowWide" />
-        <feMergeNode in="glowMed" />
-        <feMergeNode in="glowCore" />
-        <feMergeNode in="shadowSharp" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-  `.trim();
+  // Shadows removed on purpose: no premium glow under logos or labels.
+  const premiumGlowFilter = '';
 
   const getTextColor = () => {
     if (colorMode === 'white') return '#ffffff';
@@ -775,14 +731,9 @@ export const buildQualityBadgeSvg = (
 
   const generateGlowText = (attrs: string, content: string) => {
     if (isReferencePlain) {
-      const glowLayers = Array.from({ length: 10 }, (_, i) => {
-        const strokeWidth = 18 - i * 1.6;
-        const opacity = 0.03 + (i * 0.04);
-        return `<text ${attrs} fill="none" stroke="black" stroke-opacity="${opacity}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round">${content}</text>`;
-      }).join('\n');
-      return `${glowLayers}\n<text ${attrs} fill="${textColor}" stroke="black" stroke-width="1.8" paint-order="stroke fill" filter="url(#premium-glow)">${content}</text>`;
+      return `<text ${attrs} fill="${textColor}" stroke="black" stroke-width="1.8" paint-order="stroke fill">${content}</text>`;
     }
-    return `<text ${attrs} fill="${textColor}"${universalStroke} filter="url(#premium-glow)">${content}</text>`;
+    return `<text ${attrs} fill="${textColor}"${universalStroke}>${content}</text>`;
   };
 
   const wrapSvg = (content: string, width: number, height: number) => {
@@ -823,7 +774,7 @@ ${content}
     const imageHeight = Math.max(1, h - imagePaddingY * 2);
 
     if (isReferencePlain) {
-      const content = `<image href="${imageHref}" x="${imagePaddingX}" y="${imagePaddingY}" width="${imageWidth}" height="${imageHeight}" preserveAspectRatio="xMidYMid meet" filter="url(#premium-glow)"/>`;
+      const content = `<image href="${imageHref}" x="${imagePaddingX}" y="${imagePaddingY}" width="${imageWidth}" height="${imageHeight}" preserveAspectRatio="xMidYMid meet"/>`;
       return { svg: wrapSvgPadded(content, width, h), width, height: h, isPadded: true };
     }
 
@@ -847,7 +798,7 @@ ${rect}
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}" viewBox="0 0 ${width} ${h}">
 ${premiumGlowFilter}
 ${rect}
-<text x="${width / 2}" y="${labelY}" font-family="${fontFamily}" font-size="${labelSize}" font-weight="800" text-anchor="middle" fill="${labelColor}" filter="url(#premium-glow)">${escapeXml(iconMeta.label)}</text>
+<text x="${width / 2}" y="${labelY}" font-family="${fontFamily}" font-size="${labelSize}" font-weight="800" text-anchor="middle" fill="${labelColor}">${escapeXml(iconMeta.label)}</text>
 </svg>`;
     return { svg, width, height: h };
   }
@@ -1126,26 +1077,16 @@ export const buildBadgeSvg = ({
           accentColor,
         });
   const monogramFill = ratingStyle === 'glass' ? 'white' : accentColor;
-  const textShadowFilter = `
-    <filter id="text-shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="1.8" result="blur" />
-      <feOffset dx="0" dy="1.2" in="blur" result="offsetBlur" />
-      <feComponentTransfer in="offsetBlur" result="shadow">
-        <feFuncA type="linear" slope="0.85" />
-      </feComponentTransfer>
-      <feMerge>
-        <feMergeNode in="shadow" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-  `.trim();
+  // Shadows removed on purpose: no text-shadow filter at all, the glyphs keep only
+  // their crisp black outline for legibility.
+  const textShadowFilter = '';
   const itemFilter = '';
   const iconImage =
     !iconDataUri
       ? ''
       : ratingStyle === 'plain'
-        ? `<image href="${iconDataUri}" x="${iconImageX}" y="${iconImageY}" width="${renderedIconSize}" height="${renderedIconSize}" preserveAspectRatio="xMidYMid meet" filter="url(#text-shadow)" />`
-        : `<defs><clipPath id="${clipPathId}">${iconClipPath}</clipPath></defs><image href="${iconDataUri}" x="${iconImageX}" y="${iconImageY}" width="${renderedIconSize}" height="${renderedIconSize}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipPathId})" filter="url(#text-shadow)" />${iconBorder}`;
+        ? `<image href="${iconDataUri}" x="${iconImageX}" y="${iconImageY}" width="${renderedIconSize}" height="${renderedIconSize}" preserveAspectRatio="xMidYMid meet" />`
+        : `<defs><clipPath id="${clipPathId}">${iconClipPath}</clipPath></defs><image href="${iconDataUri}" x="${iconImageX}" y="${iconImageY}" width="${renderedIconSize}" height="${renderedIconSize}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipPathId})" />${iconBorder}`;
   const monogramText =
     iconDataUri || hideIcon
       ? ''
@@ -1177,11 +1118,11 @@ export const buildBadgeSvg = ({
     ? Array.from({ length: 10 }, (_, i) => {
       const strokeWidth = 18 - i * 1.6;
       const opacity = 0.03 + (i * 0.04);
-      return `<text ${commonAttrs} fill="none" stroke="black" stroke-opacity="${opacity}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round">${textInnerContent}</text>`;
+      return `<text ${commonAttrs} fill="none" stroke="none" stroke-opacity="${opacity}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round">${textInnerContent}</text>`;
     }).join('\n')
     : '';
 
-  const valueText = `${glowLayers}<text ${commonAttrs} fill="white"${valueStroke} filter="url(#text-shadow)">${textInnerContent}</text>`;
+  const valueText = `${glowLayers}<text ${commonAttrs} fill="white"${valueStroke}>${textInnerContent}</text>`;
   const capsuleClipStart = ratingStyle === 'glass' ? `<g clip-path="url(#capsule-clip-${clipPathId})">` : '';
   const capsuleClipEnd = ratingStyle === 'glass' ? '</g>' : '';
 
@@ -1268,7 +1209,7 @@ export const buildRankingBadgeSvg = (
       ? Array.from({ length: 8 }, (_, i) => {
         const strokeWidth = 20 - i * 2.5;
         const opacity = 0.05 + (i * 0.05);
-        return `<text x="${textX}" y="${textBaselineY}" font-family="${RANKING_TEXT_FONT_FAMILY}" font-size="${compactFontSize}" font-style="${fontStyle}" font-weight="${fontWeight}" text-anchor="middle" fill="none" stroke="rgba(0,0,0,${opacity})" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round" style="font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1;">${escapeXml(value)}</text>`;
+        return `<text x="${textX}" y="${textBaselineY}" font-family="${RANKING_TEXT_FONT_FAMILY}" font-size="${compactFontSize}" font-style="${fontStyle}" font-weight="${fontWeight}" text-anchor="middle" fill="none" stroke="rgba(0,0,0,0)" data-glow=${opacity})" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round" style="font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1;">${escapeXml(value)}</text>`;
       }).join('\\n')
       : '';
 
@@ -1291,7 +1232,7 @@ ${textOpen}${rankGlowLayers}
       ? Array.from({ length: 8 }, (_, i) => {
         const strokeWidth = 20 - i * 2.5;
         const opacity = 0.05 + (i * 0.05);
-        return `<text x="${rankX}" y="${textY}" font-family="'Noto Sans','DejaVu Sans',Arial,sans-serif" font-size="${rankFontSize}" font-style="italic" font-weight="500" fill="none" stroke="rgba(0,0,0,${opacity})" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round" style="font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1;">${escapeXml(value)}</text>`;
+        return `<text x="${rankX}" y="${textY}" font-family="'Noto Sans','DejaVu Sans',Arial,sans-serif" font-size="${rankFontSize}" font-style="italic" font-weight="500" fill="none" stroke="rgba(0,0,0,0)" data-glow=${opacity})" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round" style="font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1;">${escapeXml(value)}</text>`;
       }).join('\\n')
       : '';
 
@@ -1316,7 +1257,7 @@ ${rankGlowLayers}
     ? Array.from({ length: 8 }, (_, i) => {
       const strokeWidth = 20 - i * 2.5;
       const opacity = 0.05 + (i * 0.05);
-      return `<text x="${rankX}" y="${textY}" font-family="'Noto Sans','DejaVu Sans',Arial,sans-serif" font-size="${rankFontSize}" font-style="italic" font-weight="500" fill="none" stroke="rgba(0,0,0,${opacity})" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round" style="font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1;">${escapeXml(value)}</text>`;
+      return `<text x="${rankX}" y="${textY}" font-family="'Noto Sans','DejaVu Sans',Arial,sans-serif" font-size="${rankFontSize}" font-style="italic" font-weight="500" fill="none" stroke="rgba(0,0,0,0)" data-glow=${opacity})" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round" style="font-variant-numeric: tabular-nums lining-nums; font-feature-settings: 'tnum' 1, 'lnum' 1;">${escapeXml(value)}</text>`;
     }).join('\\n')
     : '';
 
@@ -1324,7 +1265,7 @@ ${rankGlowLayers}
     ? Array.from({ length: 8 }, (_, i) => {
       const strokeWidth = 20 - i * 2.5;
       const opacity = 0.05 + (i * 0.05);
-      return `<text x="${labelX}" y="${textY}" font-family="'Noto Sans','DejaVu Sans',Arial,sans-serif" font-size="${labelFontSize}" font-weight="800" fill="none" stroke="rgba(0,0,0,${opacity})" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round">${escapeXml(label)}</text>`;
+      return `<text x="${labelX}" y="${textY}" font-family="'Noto Sans','DejaVu Sans',Arial,sans-serif" font-size="${labelFontSize}" font-weight="800" fill="none" stroke="rgba(0,0,0,0)" data-glow=${opacity})" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round">${escapeXml(label)}</text>`;
     }).join('\\n')
     : '';
 

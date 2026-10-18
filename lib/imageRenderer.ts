@@ -101,7 +101,8 @@ export const renderWithSharp = async (
       top: number,
       width: number,
       height: number,
-      radius: number
+      radius: number,
+      inset: number
     ): Promise<string | null> => {
       if (width < 2 || height < 2) return null;
       const key = `${left}|${top}|${width}|${height}|${radius}`;
@@ -114,9 +115,9 @@ export const renderWithSharp = async (
         const cropHeight = Math.max(1, Math.min(height, input.outputHeight - cropTop));
         const patch = await sharp(resizedImageBuffer)
           .extract({ left: cropLeft, top: cropTop, width: cropWidth, height: cropHeight })
-          .blur(Math.max(1, Math.round(height * 0.07)))
+          .blur(Math.max(1, Math.round(height * 0.1)))
           .toBuffer();
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><defs><clipPath id="glass-plate"><rect x="4" y="4" width="${Math.max(1, width - 8)}" height="${Math.max(1, height - 8)}" rx="${Math.max(0, radius - 4)}" /></clipPath></defs><g clip-path="url(#glass-plate)"><image href="data:image/png;base64,${patch.toString('base64')}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none" /></g></svg>`;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><defs><clipPath id="glass-plate"><rect x="${inset}" y="${inset}" width="${Math.max(1, width - inset * 2)}" height="${Math.max(1, height - inset * 2)}" rx="${Math.max(0, radius - inset)}" /></clipPath></defs><g clip-path="url(#glass-plate)" opacity="0.62"><image href="data:image/png;base64,${patch.toString('base64')}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="none" /></g></svg>`;
         const dataUri = `data:image/png;base64,${(await sharp(Buffer.from(svg)).png().toBuffer()).toString('base64')}`;
         glassBackdropCache.set(key, dataUri);
         return dataUri;
@@ -2477,13 +2478,26 @@ export const renderWithSharp = async (
         }
         const size = svg.match(/width="([\d.]+)" height="([\d.]+)"/);
         const viewBox = svg.match(/viewBox="(-?[\d.]+) (-?[\d.]+) ([\d.]+) ([\d.]+)"/);
-        const scale = size && viewBox ? Number(size[1]) / Number(viewBox[3]) : 1;
+        // Badge SVGs use a padded viewBox with the default preserveAspectRatio (xMidYMid meet): the
+        // content is scaled by the SMALLER ratio and centred, so the capsule box has to be mapped
+        // with that same transform, otherwise the plate lands off the pill.
+        const svgW = size ? Number(size[1]) : 0;
+        const svgH = size ? Number(size[2]) : 0;
+        const vbX = viewBox ? Number(viewBox[1]) : 0;
+        const vbY = viewBox ? Number(viewBox[2]) : 0;
+        const vbW = viewBox ? Number(viewBox[3]) : svgW;
+        const vbH = viewBox ? Number(viewBox[4]) : svgH;
+        const scale = svgW > 0 && svgH > 0 && vbW > 0 && vbH > 0 ? Math.min(svgW / vbW, svgH / vbH) : 1;
+        const offsetX = svgW > 0 && vbW > 0 ? (svgW - vbW * scale) / 2 : 0;
+        const offsetY = svgH > 0 && vbH > 0 ? (svgH - vbH * scale) / 2 : 0;
         const width = Math.round(Number(capsule[3]) * scale);
         const height = Math.round(Number(capsule[4]) * scale);
-        const left = Math.round(overlay.left + (Number(capsule[1]) - (viewBox ? Number(viewBox[1]) : 0)) * scale);
-        const top = Math.round(overlay.top + (Number(capsule[2]) - (viewBox ? Number(viewBox[2]) : 0)) * scale);
+        const left = Math.round(overlay.left + offsetX + (Number(capsule[1]) - vbX) * scale);
+        const top = Math.round(overlay.top + offsetY + (Number(capsule[2]) - vbY) * scale);
+        // The capsule box is now mapped exactly, so a hairline inset is enough everywhere.
+        const plateInset = 0.5;
         const plate = width > 1 && height > 1
-          ? await getGlassBackdrop(left, top, width, height, Math.round(Number(capsule[5]) * scale))
+          ? await getGlassBackdrop(left, top, width, height, Math.round(Number(capsule[5]) * scale), plateInset)
           : null;
         if (plate) {
           glassOverlays.push({ input: Buffer.from(plate.split(',')[1], 'base64'), top, left });
