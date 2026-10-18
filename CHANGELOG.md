@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.22](https://github.com/realbestia1/erdb/compare/v0.7.21...v0.7.22) - 2026-10-18
+
+- Tune badge rendering and glass overlays ([f588974](https://github.com/realbestia1/erdb/commit/f58897421fded9c4fb6b84fdef5896031e478f87))
+  Remove badge text and logo shadows, improve glass backdrop placement and appearance, and bump the package and renderer cache versions.
+
 ## [0.7.21](https://github.com/realbestia1/erdb/compare/v0.7.19...v0.7.21) - 2026-10-18
 
 - Add configurable frosted glass badge styles ([c95f1dd](https://github.com/realbestia1/erdb/commit/c95f1dd722e6986c9385f6dfa7dab2aafeb4a10f))
