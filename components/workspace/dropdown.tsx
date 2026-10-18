@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 
 export function Dropdown<T extends string>({ value, onChange, options, className, width }: {
   value: T;
@@ -63,12 +63,13 @@ export function Dropdown<T extends string>({ value, onChange, options, className
       exit={{ opacity: 0, y: -6, scaleY: 0.95 }}
       transition={{ duration: 0.15, ease: 'easeOut' }}
       style={{ transformOrigin: 'top', ...menuStyle }}
-      className="overflow-hidden rounded-xl border border-white/10 bg-[#0d0f14] shadow-2xl" role="listbox">
-      <div className="max-h-[50vh] overflow-y-auto">
+      className="overflow-hidden rounded-xl border border-white/[0.12] bg-[#0d0f14] shadow-2xl" role="listbox">
+      <div className="max-h-[50vh] overflow-y-auto p-1">
         {options.map(opt => (
           <button key={opt.id} type="button" role="option" aria-selected={value === opt.id} onClick={() => { onChange(opt.id); setOpen(false); btnRef.current?.focus(); }}
-            className={`w-full px-2.5 py-1.5 text-left text-sm transition-colors duration-150 truncate ${value === opt.id ? 'bg-orange-500/15 text-orange-300' : 'text-slate-100 hover:bg-white/[0.06] hover:text-white'}`}>
-            {opt.label}
+            className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors duration-150 ${value === opt.id ? 'bg-orange-500/15 text-orange-300' : 'text-slate-100 hover:bg-white/[0.06] hover:text-white'}`}>
+            <span className="truncate">{opt.label}</span>
+            {value === opt.id && <Check className="h-3.5 w-3.5 shrink-0" />}
           </button>
         ))}
       </div>

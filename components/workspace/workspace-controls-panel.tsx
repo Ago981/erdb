@@ -279,7 +279,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
         />
       </div>
 
-      <div className="premium-scrollbar flex-1 space-y-6 overflow-y-auto p-4">
+      <div className="premium-scrollbar flex-1 space-y-5 overflow-y-auto px-4 pb-6 pt-4">
         <Section
           icon={KeyRound}
           title="API keys"
@@ -345,8 +345,8 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                     aria-pressed={isActive}
                     className={`flex cursor-pointer flex-col gap-1 rounded-2xl border p-3 text-left transition-all focus-visible:ring-2 focus-visible:ring-orange-400/50 focus-visible:outline-none ${
                       isActive
-                        ? 'border-orange-400/40 bg-orange-500/10 shadow-[0_0_24px_-14px_rgba(249,115,22,0.9)]'
-                        : 'border-white/5 bg-black/30 hover:border-white/10 hover:bg-white/[0.04]'
+                        ? 'border-orange-400/50 bg-orange-500/[0.12] shadow-[0_0_28px_-12px_rgba(249,115,22,0.85)]'
+                        : 'border-white/[0.08] bg-black/30 hover:border-white/[0.14] hover:bg-white/[0.05]'
                     }`}
                   >
                     <span className="flex items-center justify-between gap-2">
@@ -492,7 +492,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                       />
 
                       {posterConfiguratorPreset === 'custom' && (
-                        <div className="space-y-2 border-t border-white/5 pt-3">
+                        <div className="space-y-2 border-t border-white/[0.08] pt-3">
                           <Toggle
                             checked={rankingCompact}
                             onChange={setRankingCompact}
@@ -532,7 +532,7 @@ export function WorkspaceControlsPanel({ state, derived, actions }: WorkspaceCon
                 )}
 
                 {posterConfiguratorPreset === 'custom' && (
-                  <div className="space-y-2 border-t border-white/5 pt-3">
+                  <div className="space-y-2 border-t border-white/[0.08] pt-3">
                     <Field label="Ratings position">
                       {renderDropdown(posterRatingsLayout, setPosterRatingsLayout, POSTER_RATING_LAYOUT_OPTIONS)}
                     </Field>

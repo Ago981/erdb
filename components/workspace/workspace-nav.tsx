@@ -430,7 +430,7 @@ export function WorkspaceNav({ refs, state, actions, onOpenRotateModal }: Worksp
           {tmdbKey ? (
             <LanguagePicker lang={lang} options={langOptions} onChange={setLang} className="w-32 max-w-[38vw]" />
           ) : (
-            <div className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-[#080808] px-2.5 text-[10px] text-slate-200">
+            <div className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-black/25 px-2.5 text-[10px] text-slate-200">
               <Globe2 className="h-3 w-3 shrink-0" />
               <span>No key</span>
             </div>
@@ -483,7 +483,7 @@ export function WorkspaceNav({ refs, state, actions, onOpenRotateModal }: Worksp
             {tmdbKey ? (
               <LanguagePicker lang={lang} options={langOptions} onChange={setLang} className="hidden lg:block" />
             ) : (
-              <div className="hidden h-9 shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-[#080808] px-2.5 text-[10px] text-slate-200 lg:flex">
+              <div className="hidden h-9 shrink-0 items-center gap-1.5 rounded-xl border border-white/10 bg-black/25 px-2.5 text-[10px] text-slate-200 lg:flex">
                 <Globe2 className="h-3 w-3 shrink-0" />
                 <span>No TMDB key</span>
               </div>
