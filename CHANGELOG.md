@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.21](https://github.com/realbestia1/erdb/compare/v0.7.19...v0.7.21) - 2026-10-18
+
+- Add configurable frosted glass badge styles ([c95f1dd](https://github.com/realbestia1/erdb/commit/c95f1dd722e6986c9385f6dfa7dab2aafeb4a10f))
+  Add colored and transparent Glass variants for quality badges and poster genre chips, with blurred poster backdrops and workspace controls. Presets now reset genre chips to the flat style.
+
 ## [0.7.19](https://github.com/realbestia1/erdb/compare/v0.7.18...v0.7.19) - 2026-10-18
 
 - Restore glass rating style as default ([50e009e](https://github.com/realbestia1/erdb/commit/50e009e90eca363a4e8645200a0cdb95816f3333))
