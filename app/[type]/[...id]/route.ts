@@ -582,7 +582,7 @@ export async function GET(
   const normalizedPosterImageText =
     imageText === 'original' ? 'default' : imageText;
   const normalizedPosterAnimeImageText =
-    posterAnimeImageTextParam === 'original' ? 'default' : posterAnimeImageTextParam;
+    posterAnimeImageTextParam;
   const posterTextPreference: PosterTextPreference =
     normalizedPosterImageText === 'clean' ||
       normalizedPosterImageText === 'alternative' ||
@@ -596,7 +596,7 @@ export async function GET(
       ? normalizedPosterAnimeImageText
       : 'clean';
   const normalizedBackdropAnimeImageText =
-    backdropAnimeImageTextParam === 'original' ? 'default' : backdropAnimeImageTextParam;
+    backdropAnimeImageTextParam;
   const backdropAnimeTextPreference: PosterTextPreference =
     normalizedBackdropAnimeImageText === 'clean' ||
       normalizedBackdropAnimeImageText === 'alternative' ||
@@ -741,6 +741,23 @@ export async function GET(
         hasConfirmedAnimeMapping = false;
         return true;
       };
+
+      // Anime override "original": prefer the Kitsu artwork over TMDB for anime inputs.
+      const wantedAnimeImageText =
+        imageType === 'backdrop' ? backdropAnimeImageTextParam : posterAnimeImageTextParam;
+      if (wantedAnimeImageText === 'original' && (isKitsu || ANIME_NATIVE_INPUT_ID_PREFIX_SET.has(idPrefix))) {
+        const kitsuOriginalAsset = await fetchKitsuFallbackAsset(
+          mediaId,
+          imageType,
+          logoMode,
+          logoFontVariant,
+          logoPrimary,
+          logoSecondary,
+          logoOutline,
+          phases
+        );
+        applyAnimeCdnFallback(kitsuOriginalAsset, 'kitsu');
+      }
 
       if (isTmdb) {
         if (explicitTmdbMediaType) {
