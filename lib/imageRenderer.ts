@@ -2241,7 +2241,9 @@ export const renderWithSharp = async (
           lastTopBadgeRowLeft - renderedWidth - rankingGap
         );
         const maxLeft = Math.max(rowInset, input.outputWidth - renderedWidth - rowInset);
-        const candidates = [preferredLeft, rowInset, maxLeft]
+        // Prefer the far-left slot so the ranking sits on the left edge of the row (the ratings keep
+        // their side); the slot next to the ratings is only the fallback when it does not fit there.
+        const candidates = [rowInset, preferredLeft, maxLeft]
           .map((candidateLeft) => Math.max(rowInset, Math.min(candidateLeft, maxLeft)))
           .filter((candidateLeft, index, values) => values.indexOf(candidateLeft) === index)
           .map((candidateLeft) => ({
