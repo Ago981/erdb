@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.28](https://github.com/realbestia1/erdb/compare/v0.7.27...v0.7.28) - 2026-10-19
+
+- Prefer left edge for ranking badge ([8d374c1](https://github.com/realbestia1/erdb/commit/8d374c17c036ea67cf435436804b7a70316a67cb))
+  Place the ranking badge at the far-left row slot before falling back beside the ratings. Bump the image renderer cache version and package version.
+
 ## [0.7.27](https://github.com/realbestia1/erdb/compare/v0.7.26...v0.7.27) - 2026-10-19
 
 - Fix badge placement on textless posters ([c5819c1](https://github.com/realbestia1/erdb/commit/c5819c1e5fe97dbd884ef93bedd186716a73cdcd))
