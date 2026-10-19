@@ -821,16 +821,18 @@ export const renderWithSharp = async (
       const overlayX = selectedOverlay.left;
       if (overlay) {
         overlays.push({ input: overlay.buffer, top: overlayY, left: overlayX });
+        addPosterBlockingRect(
+          Math.max(0, overlayX - reservePad),
+          Math.max(input.badgeTopOffset, overlayY - reservePad),
+          Math.min(input.outputWidth, overlayWidth + reservePad * 2),
+          overlayHeight + reservePad * 2
+        );
+        // Only a drawn overlay means the artwork has a logo/title: when it is missing the position
+        // helpers must not think there is something to sit above (or to reserve space for).
+        lastOverlayTopY = overlayY;
+        lastOverlayBottomY = overlayY + overlayHeight;
+        lastOverlayAnchorY = overlayAnchorY;
       }
-      addPosterBlockingRect(
-        Math.max(0, overlayX - reservePad),
-        Math.max(input.badgeTopOffset, overlayY - reservePad),
-        Math.min(input.outputWidth, overlayWidth + reservePad * 2),
-        overlayHeight + reservePad * 2
-      );
-      lastOverlayTopY = overlayY;
-      lastOverlayBottomY = overlayY + overlayHeight;
-      lastOverlayAnchorY = overlayAnchorY;
     };
     const composeThumbnailFallbackOverlay = () => {
       if (input.imageType !== 'thumbnail' || !thumbnailFallbackTitleSpec) return;
@@ -1972,7 +1974,10 @@ export const renderWithSharp = async (
       }
       posterGenreBadgeComposed = true;
       const badge = input.posterGenreBadge;
-      const position = input.posterGenrePosition;
+      // "above-logo" needs a logo/title in the artwork: with a textless poster (clean, or the Kitsu
+      // original) there is nothing to sit above, so the chip goes to the bottom instead.
+      const position =
+        input.posterGenrePosition === 'above-logo' && lastOverlayTopY <= 0 ? 'bottom' : input.posterGenrePosition;
       const metrics: BadgeLayoutMetrics = {
         iconSize: input.badgeIconSize,
         fontSize: input.badgeFontSize,
@@ -2341,7 +2346,11 @@ export const renderWithSharp = async (
         }
         return nextTop;
       };
-      const rankingPosition = input.rankingPosition || 'auto';
+      const requestedRankingPosition = input.rankingPosition || 'auto';
+      // Same rule as the genre chip: no drawn logo/title overlay means "above-logo" has nothing to
+      // sit above, so the badge goes to the bottom instead of floating over the artwork.
+      const rankingPosition =
+        requestedRankingPosition === 'above-logo' && lastOverlayTopY <= 0 ? 'bottom' : requestedRankingPosition;
       let top =
         rankingPosition === 'bottom'
           ? getBottomRankingTop()
