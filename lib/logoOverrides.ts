@@ -14,6 +14,7 @@ export const KITSU_LOGO_OVERRIDES: Record<string, string> = {
   '11367': '/29yKDJEY93BxDMRKSR1BbF4A3BO.png', // XY&Z
   '12533': '/fqhGIRbQHm57Ma0X8Tkw6BzOJA7.png', // Sun & Moon
   '42534': '/1FYfDNrEHQWbNbjX7Px7C5EM1Gy.png', // Journeys
+  '46857': '/5O7byjPlp0RVp3aWdOMQH8Q7S8w.png', // Mezase: nessun logo dedicato, uso Ultimate Journeys (S25)
 };
 
 export const getKitsuLogoOverride = (kitsuId?: string | null): string | null => {
