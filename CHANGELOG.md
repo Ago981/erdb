@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.7.25](https://github.com/realbestia1/erdb/compare/v0.7.24...v0.7.25) - 2026-10-19
+
+- Refine badge rendering and Pokémon logos ([20c7c42](https://github.com/realbestia1/erdb/commit/20c7c42eff4fe1d0f15f266edc3fbb9d1a38d496))
+  Pin Kitsu Pokémon entries to matching TMDB logos, remove SVG glow layers and the obsolete rating style, and bump the image-renderer cache version. Also update the package version and remove unused dependencies.
+
 ## [0.7.24](https://github.com/realbestia1/erdb/compare/v0.7.23...v0.7.24) - 2026-10-18
 
 - Prevent poster badge overlap ([35cb415](https://github.com/realbestia1/erdb/commit/35cb4158b4c353af77927631733070d0b849dae0))
