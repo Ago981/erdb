@@ -681,9 +681,7 @@ export async function GET(
       imageType === 'logo' ? logoSecondary : DEFAULT_LOGO_CUSTOM_SECONDARY,
       imageType === 'logo' ? logoOutline : DEFAULT_LOGO_CUSTOM_OUTLINE,
       usesPosterSettings ? qualityBadgesSide : '-',
-      usesPosterSettings && (posterRatingsLayout === 'top' || posterRatingsLayout === 'bottom' || posterRatingsLayout === 'top-bottom')
-        ? posterQualityBadgesPosition
-        : '-',
+      usesPosterSettings ? posterQualityBadgesPosition : '-',
       imageType !== 'logo' ? qualityBadgesStyle : '-',
       imageType !== 'logo' ? qualityBadgesColorMode : '-',
       imageType !== 'logo' ? String(qualityBadgesGlassMode || '-') : '-',

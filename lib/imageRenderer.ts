@@ -1177,7 +1177,8 @@ export const renderWithSharp = async (
     const composeQualityBadgeColumn = (
       columnBadges: RatingBadge[],
       startY: number,
-      side: QualityBadgesSide
+      side: QualityBadgesSide,
+      centerX = false
     ) => {
       if (columnBadges.length === 0) return;
       const qualityBaseHeight =
@@ -1244,8 +1245,9 @@ export const renderWithSharp = async (
         const badgeWidth = Math.min(spec.width, uniformBadgeWidth);
         const badgeHeightForRow = spec.height;
         const rowInset = usePosterLayout ? input.posterRowHorizontalInset : 12;
-        const rowX =
-          side === 'right'
+        const rowX = centerX
+          ? Math.max(rowInset, Math.round((input.outputWidth - badgeWidth) / 2))
+          : side === 'right'
             ? Math.max(rowInset, input.outputWidth - badgeWidth - rowInset)
             : rowInset;
         const freeRowY = findColumnBadgeY(rowY, rowX, badgeWidth, badgeHeightForRow);
@@ -1399,7 +1401,23 @@ export const renderWithSharp = async (
         return !posterBlockingRects.some((blockedRect) => rectsOverlap(rect, blockedRect));
       };
       const findAt = (top: number): { top: number; left: number } | null => {
-        const left = xCandidates.find((candidate) => fitsAt(top, candidate));
+        // Besides the preferred alignments, allow the row to slot into the free space left by
+        // whatever is already drawn at this height (a vertical rating column, the logo, ...).
+        const derived: number[] = [];
+        for (const rect of posterBlockingRects) {
+          if (rect.top >= top + layout.height || rect.top + rect.height <= top) continue;
+          derived.push(rect.left + rect.width + gap);
+          derived.push(rect.left - layout.rowWidth - gap);
+        }
+        const maxLeft = Math.max(rowInset, input.outputWidth - rowInset - layout.rowWidth);
+        const candidates = Array.from(
+          new Set(
+            [...xCandidates, ...derived].map((x) =>
+              Math.max(rowInset, Math.min(Math.round(x), maxLeft))
+            )
+          )
+        );
+        const left = candidates.find((candidate) => fitsAt(top, candidate));
         return left === undefined ? null : { top, left };
       };
       const clampTop = (top: number) => Math.max(minTop, Math.min(Math.round(top), maxTop));
@@ -1716,7 +1734,9 @@ export const renderWithSharp = async (
             qualityRowRightBound
           );
           if (row === null) {
-            warnCollision('Poster quality badges could not avoid collision at top');
+            // A wide horizontal row cannot fit between two wide standard columns: stack the
+            // chips in the free centre instead of dropping them.
+            composeQualityBadgeColumn(input.qualityBadges, input.badgeTopOffset, 'left', true);
           } else {
             const actualQualityHeight = composeQualityBadgeRow(input.qualityBadges, row.top, posterReferenceBadgeHeight, 'top', qualityAlign, row.left);
             lastPosterQualityTopY = row.top;
@@ -1789,7 +1809,7 @@ export const renderWithSharp = async (
             )
             : null;
         if (bottomRow === null) {
-          warnCollision('Poster quality badges could not avoid collision at bottom');
+          composeQualityBadgeColumn(input.qualityBadges, preferredBottomRowY, 'left', true);
         } else {
           const actualQualityHeight = composeQualityBadgeRow(input.qualityBadges, bottomRow.top, posterReferenceBadgeHeight, 'bottom', qualityAlign, bottomRow.left);
           lastPosterQualityTopY = bottomRow.top;
@@ -1834,6 +1854,14 @@ export const renderWithSharp = async (
           Math.round((input.outputHeight - qualityTotalHeight) / 2)
         );
         let qualityStartY = centeredStartY;
+        const preferredSide: 'left' | 'right' = qualityPlacement === 'right' ? 'right' : 'left';
+        const oppositeSide: 'left' | 'right' = preferredSide === 'left' ? 'right' : 'left';
+        const sideOccupied = (side: 'left' | 'right') =>
+          input.posterRatingsLayout === 'left-right' || input.posterRatingsLayout === side;
+        // A rating column owns its side: use the other one, or run down the middle when both
+        // sides are taken (left & right vertical).
+        const centeredColumn = sideOccupied(preferredSide) && sideOccupied(oppositeSide);
+        const columnSide = sideOccupied(preferredSide) && !centeredColumn ? oppositeSide : preferredSide;
         const shouldTopAlignQuality =
           (input.posterRatingsLayout === 'left' || input.posterRatingsLayout === 'right') &&
           (qualityPlacement === 'left' || qualityPlacement === 'right');
@@ -1846,7 +1874,7 @@ export const renderWithSharp = async (
             Math.max(input.badgeGap, posterReferenceBadgeGap);
           qualityStartY = Math.max(qualityStartY, belowTop);
         } else {
-          const sideBadges = qualityPlacement === 'right' ? input.rightBadges : input.leftBadges;
+          const sideBadges = columnSide === 'right' ? input.rightBadges : input.leftBadges;
           if (sideBadges.length > 0) {
             const sideColumnHeight = measureBadgeColumnHeight(sideBadges, metrics, input.verticalBadgeContent);
             if (sideColumnHeight > 0) {
@@ -1855,7 +1883,7 @@ export const renderWithSharp = async (
             }
           }
         }
-        composeQualityBadgeColumn(columnBadges, qualityStartY, qualityPlacement === 'right' ? 'right' : 'left');
+        composeQualityBadgeColumn(columnBadges, qualityStartY, columnSide, centeredColumn);
       }
     }
 
