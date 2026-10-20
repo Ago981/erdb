@@ -3447,6 +3447,11 @@ export async function GET(
         badgePaddingY = Math.round(8 * posterScale);
         badgePaddingX = Math.round(13 * posterScale);
         badgeGap = Math.round(9 * posterScale);
+        // Backdrop-as-poster is height-constrained: a slightly tighter gap lets one more row fit
+        // at the same badge size instead of shrinking the text.
+        if (isBackdropAsPoster) {
+          badgeGap = Math.min(badgeGap, 10);
+        }
         baseBadgeIconSize = badgeIconSize;
         baseBadgeFontSize = badgeFontSize;
         baseBadgePaddingX = badgePaddingX;
@@ -3547,7 +3552,7 @@ export async function GET(
             posterQualityPlacement === 'bottom' ||
             rankingPosition === 'bottom';
           const backdropBottomRowReserved = backdropBottomRowRequested
-            ? Math.max(baseBadgeHeight + badgeGap, bottomQualityReservedHeight)
+            ? baseBadgeHeight
             : 0;
           const overlayReservedHeight = isBackdropAsPoster
             ? backdropBottomRowReserved
