@@ -1317,13 +1317,20 @@ export const renderWithSharp = async (
       rowY: number,
       baseHeight?: number,
       placement = '',
-      align: 'center' | 'left' | 'right' = 'center'
+      align: 'center' | 'left' | 'right' = 'center',
+      forcedLeft?: number
     ): number => {
       const layout = getQualityBadgeRowLayout(rowBadges, baseHeight);
       if (!layout) return 0;
       const { badgeWidths, height: qualityHeight, rowGap } = layout;
       const rowInset = usePosterLayout ? input.posterRowHorizontalInset : 12;
-      let rowX = align === 'left' ? rowInset : align === 'right' ? Math.max(rowInset, input.outputWidth - layout.rowWidth - rowInset) : Math.max(rowInset, Math.round((input.outputWidth - layout.rowWidth) / 2));
+      let rowX = typeof forcedLeft === 'number'
+        ? forcedLeft
+        : align === 'left'
+          ? rowInset
+          : align === 'right'
+            ? Math.max(rowInset, input.outputWidth - layout.rowWidth - rowInset)
+            : Math.max(rowInset, Math.round((input.outputWidth - layout.rowWidth) / 2));
       const rowStartX = rowX;
       for (let index = 0; index < rowBadges.length; index += 1) {
         const badge = rowBadges[index];
@@ -1357,7 +1364,8 @@ export const renderWithSharp = async (
       minY: number,
       maxY: number,
       direction: 'up' | 'down',
-      align: 'left' | 'center' | 'right' = 'center'
+      align: 'left' | 'center' | 'right' = 'center',
+      rightBound: number = input.outputWidth
     ) => {
       const minTop = Math.max(input.badgeTopOffset, Math.round(minY));
       const maxTop = Math.max(
@@ -1368,36 +1376,44 @@ export const renderWithSharp = async (
         )
       );
       const gap = Math.max(4, Math.round((input.qualityBadgeGap ?? posterReferenceBadgeGap) * 0.75));
-      // The collision check must use the real aligned position: a right-aligned row sits at the
-      // right edge, where the rating column can be, not at the centred position.
       const rowInset = usePosterLayout ? input.posterRowHorizontalInset : 12;
-      const alignedRowX =
-        align === 'left'
-          ? rowInset
-          : align === 'right'
-            ? Math.max(rowInset, input.outputWidth - layout.rowWidth - rowInset)
-            : Math.max(rowInset, Math.round((input.outputWidth - layout.rowWidth) / 2));
-      const fitsAt = (top: number) => {
-        const rect: OverlayRect = {
-          left: alignedRowX,
-          top,
-          width: layout.rowWidth,
-          height: layout.height,
-        };
+      // A right-aligned row prefers the edge (so the genre can share the row on the left) and
+      // only moves left of a rating column when that column actually reaches this row.
+      const edgeRightX = Math.max(rowInset, input.outputWidth - layout.rowWidth - rowInset);
+      const boundRightX = Math.max(rowInset, rightBound - layout.rowWidth - rowInset);
+      const centerX = Math.max(rowInset, Math.round((input.outputWidth - layout.rowWidth) / 2));
+      const xCandidates = Array.from(
+        new Set(
+          align === 'right'
+            ? [edgeRightX, boundRightX, centerX]
+            : align === 'left'
+              ? [rowInset]
+              : [centerX]
+        )
+      );
+      const fitsAt = (top: number, left: number) => {
+        const rect: OverlayRect = { left, top, width: layout.rowWidth, height: layout.height };
         return !posterBlockingRects.some((blockedRect) => rectsOverlap(rect, blockedRect));
+      };
+      const findAt = (top: number): { top: number; left: number } | null => {
+        const left = xCandidates.find((candidate) => fitsAt(top, candidate));
+        return left === undefined ? null : { top, left };
       };
       const clampTop = (top: number) => Math.max(minTop, Math.min(Math.round(top), maxTop));
       const firstTop = clampTop(preferredY);
-      if (fitsAt(firstTop)) return firstTop;
+      const firstFit = findAt(firstTop);
+      if (firstFit) return firstFit;
 
       const primaryDelta = direction === 'up' ? -gap : gap;
       for (let top = firstTop + primaryDelta; top >= minTop && top <= maxTop; top += primaryDelta) {
-        if (fitsAt(top)) return top;
+        const fit = findAt(top);
+        if (fit) return fit;
       }
 
       const secondaryDelta = -primaryDelta;
       for (let top = firstTop + secondaryDelta; top >= minTop && top <= maxTop; top += secondaryDelta) {
-        if (fitsAt(top)) return top;
+        const fit = findAt(top);
+        if (fit) return fit;
       }
 
       const boundaryCandidates = [
@@ -1410,7 +1426,11 @@ export const renderWithSharp = async (
       ]
         .map(clampTop)
         .sort((a, b) => Math.abs(a - firstTop) - Math.abs(b - firstTop));
-      return boundaryCandidates.find(fitsAt) ?? null;
+      for (const top of boundaryCandidates) {
+        const fit = findAt(top);
+        if (fit) return fit;
+      }
+      return null;
     };
     const getPosterBottomQualityRowY = () => {
       if (!usePosterLayout || input.qualityBadges.length === 0) return null;
@@ -1663,33 +1683,41 @@ export const renderWithSharp = async (
         qualityRowWidth > 0 &&
         qualityRowWidth + earlyRankingWidth + rowInsetForAlign * 2 <= input.outputWidth;
       const genreSharesQualityRow = input.posterGenreBadge != null && input.posterGenrePosition === qualityPlacement;
-      const preferredQualityAlign: 'left' | 'center' | 'right' =
-        (rankingFitsBesideChips || genreSharesQualityRow) ? 'right' : 'center';
-      // A side rating column owns its edge from top to bottom, so the chips never align into it:
-      // right-aligning into the right column is exactly the overlap this avoids.
-      const rightColumnOccupiesEdge =
-        input.posterRatingsLayout === 'left-right'
-          ? input.rightBadges.length > 0
-          : input.posterRatingsLayout === 'right';
-      const qualityAlign: 'left' | 'center' | 'right' =
-        preferredQualityAlign === 'right' && rightColumnOccupiesEdge ? 'center' : preferredQualityAlign;
+      const qualityAlign: 'left' | 'center' | 'right' = (rankingFitsBesideChips || genreSharesQualityRow) ? 'right' : 'center';
+      // Right-aligning the chips must stop before the rating column, otherwise they overlap it.
+      const posterRightColumnWidth = input.rightBadges.reduce((max, badge) => {
+        const width = estimateBadgeWidth(
+          badge.value,
+          input.badgeFontSize,
+          input.badgePaddingX,
+          input.badgeIconSize,
+          input.badgeGap,
+          false,
+          input.verticalBadgeContent
+        );
+        return Math.max(max, width);
+      }, 0);
+      const qualityRowRightBound =
+        input.outputWidth -
+        (posterRightColumnWidth > 0 ? posterRightColumnWidth + posterReferenceBadgeGap : 0);
       if (qualityPlacement === 'top') {
         const qualityLayout = getQualityBadgeRowLayout(input.qualityBadges, posterReferenceBadgeHeight);
         if (qualityLayout) {
-          const rowY = findPosterQualityRowY(
+          const row = findPosterQualityRowY(
             input.badgeTopOffset,
             qualityLayout,
             input.badgeTopOffset,
             Math.round(input.outputHeight * 0.4),
             'down',
-            qualityAlign
+            qualityAlign,
+            qualityRowRightBound
           );
-          if (rowY === null) {
+          if (row === null) {
             warnCollision('Poster quality badges could not avoid collision at top');
           } else {
-            const actualQualityHeight = composeQualityBadgeRow(input.qualityBadges, rowY, posterReferenceBadgeHeight, 'top', qualityAlign);
-            lastPosterQualityTopY = rowY;
-            lastPosterQualityBottomY = rowY + actualQualityHeight;
+            const actualQualityHeight = composeQualityBadgeRow(input.qualityBadges, row.top, posterReferenceBadgeHeight, 'top', qualityAlign, row.left);
+            lastPosterQualityTopY = row.top;
+            lastPosterQualityBottomY = row.top + actualQualityHeight;
           }
         }
       } else if (qualityPlacement === 'bottom') {
@@ -1698,7 +1726,7 @@ export const renderWithSharp = async (
           input.outputHeight - input.badgeBottomOffset - Math.min(posterQualityMaxHeight, Math.round(posterReferenceBadgeHeight))
         );
         const qualityLayout = getQualityBadgeRowLayout(input.qualityBadges, posterReferenceBadgeHeight);
-        const bottomRowY =
+        const bottomRow =
           qualityLayout
             ? findPosterQualityRowY(
               preferredBottomRowY,
@@ -1706,15 +1734,16 @@ export const renderWithSharp = async (
               input.badgeTopOffset,
               preferredBottomRowY,
               'up',
-              qualityAlign
+              qualityAlign,
+              qualityRowRightBound
             )
             : null;
-        if (bottomRowY === null) {
+        if (bottomRow === null) {
           warnCollision('Poster quality badges could not avoid collision at bottom');
         } else {
-          const actualQualityHeight = composeQualityBadgeRow(input.qualityBadges, bottomRowY, posterReferenceBadgeHeight, 'bottom', qualityAlign);
-          lastPosterQualityTopY = bottomRowY;
-          lastPosterQualityBottomY = bottomRowY + actualQualityHeight;
+          const actualQualityHeight = composeQualityBadgeRow(input.qualityBadges, bottomRow.top, posterReferenceBadgeHeight, 'bottom', qualityAlign, bottomRow.left);
+          lastPosterQualityTopY = bottomRow.top;
+          lastPosterQualityBottomY = bottomRow.top + actualQualityHeight;
         }
       } else if (qualityPlacement === 'above-logo') {
         const qualityLayout = getQualityBadgeRowLayout(input.qualityBadges, posterReferenceBadgeHeight);
@@ -1728,20 +1757,21 @@ export const renderWithSharp = async (
             lastOverlayTopY > 0
               ? lastOverlayTopY - qualityLayout.height - overlayGap
               : input.outputHeight - input.badgeBottomOffset - qualityLayout.height;
-          const rowY = findPosterQualityRowY(
+          const row = findPosterQualityRowY(
             preferredRowY,
             qualityLayout,
             input.badgeTopOffset,
             maxRowY,
             'up',
-            qualityAlign
+            qualityAlign,
+            qualityRowRightBound
           );
-          if (rowY === null) {
+          if (row === null) {
             warnCollision('Poster quality badges could not avoid collision above logo');
           } else {
-            const actualQualityHeight = composeQualityBadgeRow(input.qualityBadges, rowY, posterReferenceBadgeHeight, 'above-logo', qualityAlign);
-            lastPosterQualityTopY = rowY;
-            lastPosterQualityBottomY = rowY + actualQualityHeight;
+            const actualQualityHeight = composeQualityBadgeRow(input.qualityBadges, row.top, posterReferenceBadgeHeight, 'above-logo', qualityAlign, row.left);
+            lastPosterQualityTopY = row.top;
+            lastPosterQualityBottomY = row.top + actualQualityHeight;
           }
         }
       } else {
