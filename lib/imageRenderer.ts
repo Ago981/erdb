@@ -1717,7 +1717,25 @@ export const renderWithSharp = async (
         earlyRankingWidth > 0 &&
         qualityRowWidth > 0 &&
         qualityRowWidth + earlyRankingWidth + rowInsetForAlign * 2 <= input.outputWidth;
-      const genreSharesQualityRow = input.posterGenreBadge != null && input.posterGenrePosition === qualityPlacement;
+      // A side quality column that cannot fit below a full rating column becomes a bottom
+      // row instead: the ratings keep their count and the chips stay visible and ordered.
+      let effectiveQualityPlacement = qualityPlacement;
+      if (input.backdropAsPoster && (qualityPlacement === 'left' || qualityPlacement === 'right')) {
+        const preferRightSide = qualityPlacement === 'right';
+        const sideBadges = preferRightSide ? input.rightBadges : input.leftBadges;
+        const sideColumnHeight = measureBadgeColumnHeight(sideBadges, metrics, input.verticalBadgeContent);
+        const belowSideY = Math.max(
+          input.badgeTopOffset,
+          input.badgeTopOffset + sideColumnHeight + input.badgeGap
+        );
+        const sideQualityHeight =
+          input.qualityBadges.length * qualityBadgeHeight +
+          Math.max(0, input.qualityBadges.length - 1) * input.badgeGap;
+        if (belowSideY + sideQualityHeight > input.outputHeight - input.badgeBottomOffset) {
+          effectiveQualityPlacement = 'bottom';
+        }
+      }
+      const genreSharesQualityRow = input.posterGenreBadge != null && input.posterGenrePosition === effectiveQualityPlacement;
       const qualityAlign: 'left' | 'center' | 'right' = (rankingFitsBesideChips || genreSharesQualityRow) ? 'right' : 'center';
       // Right-aligning the chips must stop before the rating column, otherwise they overlap it.
       const posterRightColumnWidth = input.rightBadges.reduce((max, badge) => {
@@ -1735,23 +1753,9 @@ export const renderWithSharp = async (
       const qualityRowRightBound =
         input.outputWidth -
         (posterRightColumnWidth > 0 ? posterRightColumnWidth + posterReferenceBadgeGap : 0);
-      if (qualityPlacement === 'top') {
+      if (effectiveQualityPlacement === 'top') {
         const qualityLayout = getQualityBadgeRowLayout(input.qualityBadges, posterReferenceBadgeHeight);
         if (qualityLayout) {
-          // Ranking + chips on one centred pair at the top.
-          let preferredRowLeft: number | undefined;
-          const rankingPosRaw = input.rankingPosition || 'auto';
-          const resolvedRankingPos =
-            rankingPosRaw === 'auto' ? (lastOverlayTopY > 0 ? 'above-logo' : 'top') : rankingPosRaw;
-          if (input.rankingBadge != null && resolvedRankingPos === qualityPlacement && earlyRankingWidth > 0) {
-            const rankingSlotGap = Math.max(3, Math.round(input.badgeGap * 0.35));
-            const pairWidth = earlyRankingWidth + rankingSlotGap + qualityLayout.rowWidth;
-            const pairLeft = Math.round((input.outputWidth - pairWidth) / 2);
-            const chipsLeft = pairLeft + earlyRankingWidth + rankingSlotGap;
-            if (pairLeft >= input.posterRowHorizontalInset && chipsLeft + qualityLayout.rowWidth <= input.outputWidth - input.posterRowHorizontalInset) {
-              preferredRowLeft = chipsLeft;
-            }
-          }
           const row = findPosterQualityRowY(
             input.badgeTopOffset,
             qualityLayout,
@@ -1760,7 +1764,7 @@ export const renderWithSharp = async (
             'down',
             qualityAlign,
             qualityRowRightBound,
-            preferredRowLeft
+            undefined
           );
           if (row === null) {
             // A wide horizontal row cannot fit between two wide standard columns: stack the
@@ -1772,74 +1776,12 @@ export const renderWithSharp = async (
             lastPosterQualityBottomY = row.top + actualQualityHeight;
           }
         }
-      } else if (qualityPlacement === 'bottom') {
+      } else if (effectiveQualityPlacement === 'bottom') {
         const preferredBottomRowY = getPosterBottomQualityRowY() ?? Math.max(
           input.badgeTopOffset,
           input.outputHeight - input.badgeBottomOffset - Math.min(posterQualityMaxHeight, Math.round(posterReferenceBadgeHeight))
         );
         const qualityLayout = getQualityBadgeRowLayout(input.qualityBadges, posterReferenceBadgeHeight);
-        // When the genre shares this row but a rating column owns the bottom-left corner, centre
-        // the pair instead of pushing it against the right column.
-        let preferredRowLeft: number | undefined;
-        if (qualityLayout && genreSharesQualityRow && input.posterGenreBadge) {
-          const rowInset = usePosterLayout ? input.posterRowHorizontalInset : 12;
-          const genreRowHeight = estimateBadgeHeight(
-            input.badgeFontSize,
-            input.badgePaddingX,
-            input.badgePaddingY,
-            0,
-            'standard'
-          );
-          const genreRowWidth = estimateBadgeWidth(
-            input.posterGenreBadge.value,
-            input.badgeFontSize,
-            input.badgePaddingX,
-            0,
-            input.badgeGap,
-            false,
-            'standard'
-          );
-          const genreRowGap = Math.max(8, Math.round(input.badgeGap * 1.2));
-          const rankingPosRaw = input.rankingPosition || 'auto';
-          const resolvedRankingPos =
-            rankingPosRaw === 'auto' ? (lastOverlayTopY > 0 ? 'above-logo' : 'top') : rankingPosRaw;
-          const rankingOnRow = input.rankingBadge != null && resolvedRankingPos === qualityPlacement;
-          if (rankingOnRow && earlyRankingWidth > 0) {
-            // Genre + ranking + chips on one centred block: the ranking sits between them, but
-            // only when the whole block actually fits. Otherwise the chips keep their normal
-            // right-aligned slot instead of being clamped to the left edge.
-            const rankingSlotGap = Math.max(3, Math.round(input.badgeGap * 0.35));
-            const groupWidth =
-              genreRowWidth + genreRowGap + earlyRankingWidth + rankingSlotGap + qualityLayout.rowWidth;
-            const groupLeft = Math.round((input.outputWidth - groupWidth) / 2);
-            const chipsLeft = groupLeft + groupWidth - qualityLayout.rowWidth;
-            const maxChipsLeft = input.outputWidth - rowInset - qualityLayout.rowWidth;
-            if (groupLeft >= rowInset && chipsLeft <= maxChipsLeft) {
-              preferredRowLeft = chipsLeft;
-            }
-          } else {
-            const genreLeftFits = !posterBlockingRects.some((rect) =>
-              rectsOverlap(
-                {
-                  left: rowInset,
-                  top: Math.max(0, preferredBottomRowY + Math.round((qualityLayout.height - genreRowHeight) / 2)),
-                  width: genreRowWidth,
-                  height: genreRowHeight,
-                },
-                rect
-              )
-            );
-            if (!genreLeftFits) {
-              const groupWidth = genreRowWidth + genreRowGap + qualityLayout.rowWidth;
-              const groupLeft = Math.round((input.outputWidth - groupWidth) / 2);
-              const chipsLeft = groupLeft + genreRowWidth + genreRowGap;
-              // Centre the pair only when it fits; otherwise leave the chips right-aligned.
-              if (groupLeft >= rowInset && chipsLeft <= input.outputWidth - rowInset - qualityLayout.rowWidth) {
-                preferredRowLeft = chipsLeft;
-              }
-            }
-          }
-        }
         const bottomRow =
           qualityLayout
             ? findPosterQualityRowY(
@@ -1850,7 +1792,7 @@ export const renderWithSharp = async (
               'up',
               qualityAlign,
               qualityRowRightBound,
-              preferredRowLeft
+              undefined
             )
             : null;
         if (bottomRow === null) {
@@ -1860,7 +1802,7 @@ export const renderWithSharp = async (
           lastPosterQualityTopY = bottomRow.top;
           lastPosterQualityBottomY = bottomRow.top + actualQualityHeight;
         }
-      } else if (qualityPlacement === 'above-logo') {
+      } else if (effectiveQualityPlacement === 'above-logo') {
         const qualityLayout = getQualityBadgeRowLayout(input.qualityBadges, posterReferenceBadgeHeight);
         if (qualityLayout) {
           const overlayGap = Math.max(18, Math.round(posterReferenceBadgeGap * 1.8));
@@ -1903,15 +1845,20 @@ export const renderWithSharp = async (
           Math.round((input.outputHeight - qualityTotalHeight) / 2)
         );
         let qualityStartY = centeredStartY;
-        const preferredSide: 'left' | 'right' = qualityPlacement === 'right' ? 'right' : 'left';
+        const preferredSide: 'left' | 'right' = effectiveQualityPlacement === 'right' ? 'right' : 'left';
         const oppositeSide: 'left' | 'right' = preferredSide === 'left' ? 'right' : 'left';
         const sideOccupied = (side: 'left' | 'right') =>
           input.posterRatingsLayout === 'left-right' || input.posterRatingsLayout === side;
         // A rating column owns its side: use the other one, or run down the middle when both
         // sides are taken (left & right vertical).
         const centeredColumn = sideOccupied(preferredSide) && sideOccupied(oppositeSide);
-        const columnSide = sideOccupied(preferredSide) && !centeredColumn ? oppositeSide : preferredSide;
+        // Backdrop-as-poster reserves room for this column in the route, so it stays on its
+        // requested side below the rating column instead of running down the middle.
+        const columnSide = input.backdropAsPoster
+          ? preferredSide
+          : sideOccupied(preferredSide) && !centeredColumn ? oppositeSide : preferredSide;
         const shouldTopAlignQuality =
+          !input.backdropAsPoster &&
           (input.posterRatingsLayout === 'left' || input.posterRatingsLayout === 'right') &&
           (qualityPlacement === 'left' || qualityPlacement === 'right');
         if (shouldTopAlignQuality) {
@@ -1932,7 +1879,7 @@ export const renderWithSharp = async (
             }
           }
         }
-        composeQualityBadgeColumn(columnBadges, qualityStartY, columnSide, centeredColumn);
+        composeQualityBadgeColumn(columnBadges, qualityStartY, columnSide, centeredColumn && !input.backdropAsPoster);
       }
     }
 
@@ -2177,10 +2124,8 @@ export const renderWithSharp = async (
         const gapToChips = Math.max(8, Math.round(input.badgeGap * 1.2));
         // Prefer sitting right before the ranking (centred genre+ranking+chips block), then the
         // left inset, then immediately next to the chips when a rating column owns the corner.
-        const rankingOnRow = lastRankingRowLeft > 0 && lastRankingPlacement === position;
         const genreLeftCandidates = input.backdropAsPoster
           ? [
-            rankingOnRow ? Math.max(rowInset, lastRankingRowLeft - gapToChips - genreWidth) : rowInset,
             rowInset,
             Math.max(rowInset, lastPosterQualityRowLeft - gapToChips - genreWidth),
           ].filter((candidateLeft, index, values) => values.indexOf(candidateLeft) === index)
@@ -2504,11 +2449,43 @@ export const renderWithSharp = async (
           lastPosterQualityPlacement != null &&
           genrePosition === lastPosterQualityPlacement;
         let rankingLeft = rowInset;
-        if (input.backdropAsPoster) {
-          const genreBadgeOnRow = genreOnRow ? input.posterGenreBadge : null;
-          const genreWidth = genreBadgeOnRow
+        const classicRowPreset =
+          input.posterConfiguratorPreset === 'preset1' || input.posterConfiguratorPreset === 'preset2';
+        if (input.backdropAsPoster && !classicRowPreset) {
+          // Backdrop rows: trio (genre + ranking + chips) spreads left/centre/right, a pair
+          // splits to the insets, and anything blocked packs next to the chips. Classic rows
+          // keep the poster's left/right behaviour.
+          const qL = lastPosterQualityRowLeft;
+          const qR = lastPosterQualityRowRight;
+          const qT = lastPosterQualityTopY;
+          const qB = lastPosterQualityBottomY;
+          const rowH = Math.max(1, qB - qT);
+          const spanBlocked = (left: number, width: number) =>
+            posterBlockingRects.some((rect) => {
+              const ownChip =
+                rect.top >= qT &&
+                rect.top + rect.height <= qB &&
+                rect.left >= qL &&
+                rect.left + rect.width <= qR;
+              if (ownChip) return false;
+              return rectsOverlap({ left, top: qT, width, height: rowH }, rect);
+            });
+          const rowOccupied = posterBlockingRects.some((rect) => {
+            const ownChip =
+              rect.top >= qT &&
+              rect.top + rect.height <= qB &&
+              rect.left >= qL &&
+              rect.left + rect.width <= qR;
+            if (ownChip) return false;
+            return (
+              rect.top < qB &&
+              rect.top + rect.height > qT &&
+              (rect.left <= rowInset || rect.left + rect.width >= input.outputWidth - rowInset)
+            );
+          });
+          const genreEstW = genreOnRow && input.posterGenreBadge
             ? estimateBadgeWidth(
-              genreBadgeOnRow.value,
+              input.posterGenreBadge.value,
               input.badgeFontSize,
               input.badgePaddingX,
               0,
@@ -2517,13 +2494,31 @@ export const renderWithSharp = async (
               'standard'
             )
             : 0;
-          // Sit immediately left of the chips so ranking + chips read as one pair.
-          const slotLeft = lastPosterQualityRowLeft - rankingGap - rowWidth;
-          const minLeft = rowInset + (genreWidth > 0 ? genreWidth + rankingGap : 0);
-          if (slotLeft >= minLeft) {
-            rankingLeft = Math.round(slotLeft);
-          } else if (genreBadgeOnRow) {
-            return null;
+          const chipsW = Math.max(1, qR - qL);
+          if (genreOnRow && genreEstW > 0) {
+            const gL = rowInset;
+            const rC = Math.round((input.outputWidth - rowWidth) / 2);
+            const rL = Math.max(gL + genreEstW + rankingGap, Math.min(rC, qL - rankingGap - rowWidth));
+            if (
+              rL + rowWidth + rankingGap <= qL &&
+              gL + genreEstW + rankingGap <= rL &&
+              !spanBlocked(gL, genreEstW) &&
+              !spanBlocked(rL, rowWidth)
+            ) {
+              rankingLeft = rL;
+            } else {
+              const slotLeft = qL - rankingGap - rowWidth;
+              const minLeft = rowInset + genreEstW + rankingGap;
+              if (slotLeft >= minLeft && !spanBlocked(slotLeft, rowWidth)) {
+                rankingLeft = Math.round(slotLeft);
+              } else {
+                return null;
+              }
+            }
+          } else if (!rowOccupied) {
+            rankingLeft = rowInset;
+          } else {
+            rankingLeft = Math.max(rowInset, qL - rankingGap - rowWidth);
           }
         }
         if (scaled) {
@@ -2834,8 +2829,21 @@ export const renderWithSharp = async (
             rightBound = Math.min(rightBound, rect.left);
           }
         }
-        // Pack the items side by side (uniform gap) and centre the whole block, instead of just
-        // centring the span and leaving a huge hole between them.
+        // Pack only when items truly overlap each other: every placement above already
+        // avoids blocking rects, so a clean row keeps its placed layout instead of being
+        // re-centred.
+        const itemRects = group.map((item) => ({
+          left: item.left,
+          top: item.top,
+          width: Math.max(1, item.right - item.left),
+          height: Math.max(1, item.bottom - item.top),
+        }));
+        const overlaps = itemRects.some((rect, index) =>
+          itemRects.some(
+            (other, otherIndex) => otherIndex !== index && rectsOverlap(rect, other)
+          )
+        );
+        if (!overlaps) continue;
         const sorted = [...group].sort((a, b) => a.left - b.left);
         const itemGap = Math.max(8, Math.round(input.badgeGap * 1.2));
         const totalWidth =
