@@ -1771,28 +1771,45 @@ export const renderWithSharp = async (
             'standard'
           );
           const genreRowGap = Math.max(8, Math.round(input.badgeGap * 1.2));
-          const genreLeftFits = !posterBlockingRects.some((rect) =>
-            rectsOverlap(
-              {
-                left: rowInset,
-                top: Math.max(0, preferredBottomRowY + Math.round((qualityLayout.height - genreRowHeight) / 2)),
-                width: genreRowWidth,
-                height: genreRowHeight,
-              },
-              rect
-            )
-          );
-          if (!genreLeftFits) {
-            const groupLeft = Math.round(
-              (input.outputWidth - (genreRowWidth + genreRowGap + qualityLayout.rowWidth)) / 2
-            );
+          const rankingPosRaw = input.rankingPosition || 'auto';
+          const resolvedRankingPos =
+            rankingPosRaw === 'auto' ? (lastOverlayTopY > 0 ? 'above-logo' : 'top') : rankingPosRaw;
+          const rankingOnRow = input.rankingBadge != null && resolvedRankingPos === qualityPlacement;
+          if (rankingOnRow && earlyRankingWidth > 0) {
+            // Genre + ranking + chips on one centred block: the ranking sits between them.
+            const rankingSlotGap = Math.max(3, Math.round(input.badgeGap * 0.35));
+            const groupWidth =
+              genreRowWidth + genreRowGap + earlyRankingWidth + rankingSlotGap + qualityLayout.rowWidth;
+            const groupLeft = Math.round((input.outputWidth - groupWidth) / 2);
+            const chipsLeft = groupLeft + groupWidth - qualityLayout.rowWidth;
             preferredRowLeft = Math.max(
               rowInset,
-              Math.min(
-                groupLeft + genreRowWidth + genreRowGap,
-                qualityRowRightBound - qualityLayout.rowWidth
+              Math.min(chipsLeft, qualityRowRightBound - qualityLayout.rowWidth)
+            );
+          } else {
+            const genreLeftFits = !posterBlockingRects.some((rect) =>
+              rectsOverlap(
+                {
+                  left: rowInset,
+                  top: Math.max(0, preferredBottomRowY + Math.round((qualityLayout.height - genreRowHeight) / 2)),
+                  width: genreRowWidth,
+                  height: genreRowHeight,
+                },
+                rect
               )
             );
+            if (!genreLeftFits) {
+              const groupLeft = Math.round(
+                (input.outputWidth - (genreRowWidth + genreRowGap + qualityLayout.rowWidth)) / 2
+              );
+              preferredRowLeft = Math.max(
+                rowInset,
+                Math.min(
+                  groupLeft + genreRowWidth + genreRowGap,
+                  qualityRowRightBound - qualityLayout.rowWidth
+                )
+              );
+            }
           }
         }
         const bottomRow =
@@ -2116,22 +2133,24 @@ export const renderWithSharp = async (
         gap: input.badgeGap,
       };
 
-      const genreHeight = estimateBadgeHeight(metrics.fontSize, metrics.paddingX, metrics.paddingY, 0, 'standard');
-      const genreWidth = estimateBadgeWidth(badge.value, metrics.fontSize, metrics.paddingX, 0, metrics.gap, false, 'standard');
+      let genreHeight = estimateBadgeHeight(metrics.fontSize, metrics.paddingX, metrics.paddingY, 0, 'standard');
+      let genreWidth = estimateBadgeWidth(badge.value, metrics.fontSize, metrics.paddingX, 0, metrics.gap, false, 'standard');
+      let genreFontSize = metrics.fontSize;
 
       const tryGenreSameRowAsQuality = (): { left: number; top: number } | null => {
         if (lastPosterQualityTopY <= 0 || !lastPosterQualityPlacement) return null;
-        if (rankingPlacedSameRowAsQuality) return null;
         if (position !== lastPosterQualityPlacement) return null;
         const rowInset = usePosterLayout ? input.posterRowHorizontalInset : 12;
         const rowY = Math.max(0, lastPosterQualityTopY + Math.round((lastPosterQualityBottomY - lastPosterQualityTopY - genreHeight) / 2));
         const gapToChips = Math.max(8, Math.round(input.badgeGap * 1.2));
-        // Prefer the left inset (genre on the left, chips on the right). If a rating column
-        // occupies that corner, sit right next to the chips instead: the pair stays on one row.
+        // Prefer sitting right before the ranking (centred genre+ranking+chips block), then the
+        // left inset, then immediately next to the chips when a rating column owns the corner.
+        const rankingOnRow = lastRankingRowLeft > 0 && lastRankingPlacement === position;
         const genreLeftCandidates = [
+          rankingOnRow ? Math.max(rowInset, lastRankingRowLeft - gapToChips - genreWidth) : rowInset,
           rowInset,
           Math.max(rowInset, lastPosterQualityRowLeft - gapToChips - genreWidth),
-        ];
+        ].filter((candidateLeft, index, values) => values.indexOf(candidateLeft) === index);
         for (const genreLeft of genreLeftCandidates) {
           if (genreLeft + genreWidth > lastPosterQualityRowLeft - 2) continue;
           const genreRect: OverlayRect = { left: genreLeft, top: rowY, width: genreWidth, height: genreHeight };
@@ -2246,44 +2265,61 @@ export const renderWithSharp = async (
         }
       }
 
-      const minGenreTop = input.badgeTopOffset;
-      const maxGenreTop = Math.max(
-        minGenreTop,
-        input.outputHeight - input.badgeBottomOffset - genreHeight
-      );
-      const genreTopCandidates = [
-        top,
-        minGenreTop,
-        maxGenreTop,
-        ...posterBlockingRects.flatMap((blockedRect) => [
-          blockedRect.top - genreHeight - overlapGap,
-          blockedRect.top + blockedRect.height + overlapGap,
-        ]),
-      ];
-      for (let y = minGenreTop; y <= maxGenreTop; y += overlapGap) {
-        genreTopCandidates.push(y);
+      const findFreeGenreRect = () => {
+        const minGenreTop = input.badgeTopOffset;
+        const maxGenreTop = Math.max(
+          minGenreTop,
+          input.outputHeight - input.badgeBottomOffset - genreHeight
+        );
+        const genreTopCandidates = [
+          top,
+          minGenreTop,
+          maxGenreTop,
+          ...posterBlockingRects.flatMap((blockedRect) => [
+            blockedRect.top - genreHeight - overlapGap,
+            blockedRect.top + blockedRect.height + overlapGap,
+          ]),
+        ];
+        for (let y = minGenreTop; y <= maxGenreTop; y += overlapGap) {
+          genreTopCandidates.push(y);
+        }
+        const genreLeftCandidates = [
+          left,
+          rowInset,
+          Math.max(rowInset, input.outputWidth - genreWidth - rowInset),
+          Math.max(rowInset, Math.round((input.outputWidth - genreWidth) / 2)),
+        ].filter((candidateLeft, index, values) => values.indexOf(candidateLeft) === index);
+        return findFirstNonOverlappingRect(
+          genreTopCandidates
+            .map((candidateTop) => Math.max(minGenreTop, Math.min(Math.round(candidateTop), maxGenreTop)))
+            .filter((candidateTop, index, values) => values.indexOf(candidateTop) === index)
+            .flatMap((candidateTop) =>
+              genreLeftCandidates.map((candidateLeft) => ({
+                left: candidateLeft,
+                top: candidateTop,
+                width: genreWidth,
+                height: genreHeight,
+              }))
+            ),
+          posterBlockingRects,
+          0
+        );
+      };
+      let freeGenreRect = findFreeGenreRect();
+      if (!freeGenreRect) {
+        // Too wide for any free gap (wide standard columns on both sides): shrink the chip just
+        // enough to fit the gap instead of dropping it.
+        for (const candidateScale of [0.85, 0.72, 0.6, 0.5]) {
+          const candidateFont = Math.max(18, Math.round(metrics.fontSize * candidateScale));
+          if (candidateFont >= genreFontSize) continue;
+          genreFontSize = candidateFont;
+          genreWidth = estimateBadgeWidth(badge.value, genreFontSize, metrics.paddingX, 0, metrics.gap, false, 'standard');
+          genreHeight = estimateBadgeHeight(genreFontSize, metrics.paddingX, metrics.paddingY, 0, 'standard');
+          left = Math.round((input.outputWidth - genreWidth) / 2);
+          freeGenreRect = findFreeGenreRect();
+          if (freeGenreRect) break;
+        }
       }
-      const genreLeftCandidates = [
-        left,
-        rowInset,
-        Math.max(rowInset, input.outputWidth - genreWidth - rowInset),
-        Math.max(rowInset, Math.round((input.outputWidth - genreWidth) / 2)),
-      ].filter((candidateLeft, index, values) => values.indexOf(candidateLeft) === index);
-      const freeGenreRect = findFirstNonOverlappingRect(
-        genreTopCandidates
-          .map((candidateTop) => Math.max(minGenreTop, Math.min(Math.round(candidateTop), maxGenreTop)))
-          .filter((candidateTop, index, values) => values.indexOf(candidateTop) === index)
-          .flatMap((candidateTop) =>
-            genreLeftCandidates.map((candidateLeft) => ({
-              left: candidateLeft,
-              top: candidateTop,
-              width: genreWidth,
-              height: genreHeight,
-            }))
-          ),
-        posterBlockingRects,
-        0
-      );
       if (!freeGenreRect) {
         warnCollision(`Poster genre badge "${badge.value}" could not avoid collision`);
         return;
@@ -2295,7 +2331,7 @@ export const renderWithSharp = async (
         width: genreWidth,
         height: genreHeight,
         iconSize: 0,
-        fontSize: metrics.fontSize,
+        fontSize: genreFontSize,
         paddingX: metrics.paddingX,
         gap: metrics.gap,
         accentColor: badge.accentColor || '#4b5563',
@@ -2402,9 +2438,41 @@ export const renderWithSharp = async (
           : rankingPosRaw2;
         if (resolvedRankingPos2 !== lastPosterQualityPlacement) return null;
         const rowInset = usePosterLayout ? input.posterRowHorizontalInset : 12;
-        const rankingLeft = rowInset;
         const qualityHeight = lastPosterQualityBottomY - lastPosterQualityTopY;
-        if (renderedHeight > qualityHeight && qualityHeight > 0) {
+        const scaled = renderedHeight > qualityHeight && qualityHeight > 0;
+        const rowHeight = scaled ? Math.round(qualityHeight / rankingPlateRatio) : renderedHeight;
+        const rowWidth =
+          scaled && renderedHeight > 0
+            ? Math.min(renderedWidth, Math.round(renderedWidth * (rowHeight / renderedHeight)))
+            : renderedWidth;
+        // When the genre chip shares this row it keeps the left slot and the ranking sits right
+        // next to the quality chips: the two no longer swap places.
+        const genrePosition =
+          input.posterGenrePosition === 'above-logo' && lastOverlayTopY <= 0
+            ? 'bottom'
+            : input.posterGenrePosition;
+        const genreOnRow =
+          input.posterGenreBadge != null &&
+          lastPosterQualityPlacement != null &&
+          genrePosition === lastPosterQualityPlacement;
+        let rankingLeft = rowInset;
+        const genreBadgeOnRow = genreOnRow ? input.posterGenreBadge : null;
+        if (genreBadgeOnRow) {
+          const genreWidth = estimateBadgeWidth(
+            genreBadgeOnRow.value,
+            input.badgeFontSize,
+            input.badgePaddingX,
+            0,
+            input.badgeGap,
+            false,
+            'standard'
+          );
+          const slotLeft = lastPosterQualityRowLeft - rankingGap - rowWidth;
+          const minLeft = rowInset + genreWidth + rankingGap;
+          if (slotLeft < minLeft) return null;
+          rankingLeft = Math.round(slotLeft);
+        }
+        if (scaled) {
           return { left: rankingLeft, top: lastPosterQualityTopY, scaled: true, kind: 'quality' };
         }
         const rowY = Math.max(input.badgeTopOffset, lastPosterQualityTopY);
