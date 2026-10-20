@@ -1882,7 +1882,11 @@ export const renderWithSharp = async (
             qualityRowRightBound
           );
           if (row === null) {
-            warnCollision('Poster quality badges could not avoid collision above logo');
+            const fallbackY = Math.max(
+              input.badgeTopOffset,
+              input.outputHeight - input.badgeBottomOffset - qualityLayout.height
+            );
+            composeQualityBadgeColumn(input.qualityBadges, fallbackY, 'left', true);
           } else {
             const actualQualityHeight = composeQualityBadgeRow(input.qualityBadges, row.top, posterReferenceBadgeHeight, 'above-logo', qualityAlign, row.left);
             lastPosterQualityTopY = row.top;
@@ -2795,8 +2799,11 @@ export const renderWithSharp = async (
     composePosterGenreBadge();
 
     // Backdrop-as-poster: whenever more than one chip shares a row, centre the whole row as a
-    // block using the widths that were actually drawn (not the estimates).
-    if (input.backdropAsPoster) {
+    // block using the widths that were actually drawn (not the estimates). Classic presets keep
+    // their left/right split: there the sides are meant to stay apart.
+    const classicPreset =
+      input.posterConfiguratorPreset === 'preset1' || input.posterConfiguratorPreset === 'preset2';
+    if (input.backdropAsPoster && !classicPreset) {
       const groups: PosterRowItem[][] = [];
       for (const item of posterRowItems) {
         const group = groups.find((candidate) =>
