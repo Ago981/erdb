@@ -1356,7 +1356,8 @@ export const renderWithSharp = async (
       layout: QualityBadgeRowLayout,
       minY: number,
       maxY: number,
-      direction: 'up' | 'down'
+      direction: 'up' | 'down',
+      align: 'left' | 'center' | 'right' = 'center'
     ) => {
       const minTop = Math.max(input.badgeTopOffset, Math.round(minY));
       const maxTop = Math.max(
@@ -1367,9 +1368,18 @@ export const renderWithSharp = async (
         )
       );
       const gap = Math.max(4, Math.round((input.qualityBadgeGap ?? posterReferenceBadgeGap) * 0.75));
+      // The collision check must use the real aligned position: a right-aligned row sits at the
+      // right edge, where the rating column can be, not at the centred position.
+      const rowInset = usePosterLayout ? input.posterRowHorizontalInset : 12;
+      const alignedRowX =
+        align === 'left'
+          ? rowInset
+          : align === 'right'
+            ? Math.max(rowInset, input.outputWidth - layout.rowWidth - rowInset)
+            : Math.max(rowInset, Math.round((input.outputWidth - layout.rowWidth) / 2));
       const fitsAt = (top: number) => {
         const rect: OverlayRect = {
-          left: layout.rowX,
+          left: alignedRowX,
           top,
           width: layout.rowWidth,
           height: layout.height,
@@ -1653,7 +1663,16 @@ export const renderWithSharp = async (
         qualityRowWidth > 0 &&
         qualityRowWidth + earlyRankingWidth + rowInsetForAlign * 2 <= input.outputWidth;
       const genreSharesQualityRow = input.posterGenreBadge != null && input.posterGenrePosition === qualityPlacement;
-      const qualityAlign: 'left' | 'center' | 'right' = (rankingFitsBesideChips || genreSharesQualityRow) ? 'right' : 'center';
+      const preferredQualityAlign: 'left' | 'center' | 'right' =
+        (rankingFitsBesideChips || genreSharesQualityRow) ? 'right' : 'center';
+      // A side rating column owns its edge from top to bottom, so the chips never align into it:
+      // right-aligning into the right column is exactly the overlap this avoids.
+      const rightColumnOccupiesEdge =
+        input.posterRatingsLayout === 'left-right'
+          ? input.rightBadges.length > 0
+          : input.posterRatingsLayout === 'right';
+      const qualityAlign: 'left' | 'center' | 'right' =
+        preferredQualityAlign === 'right' && rightColumnOccupiesEdge ? 'center' : preferredQualityAlign;
       if (qualityPlacement === 'top') {
         const qualityLayout = getQualityBadgeRowLayout(input.qualityBadges, posterReferenceBadgeHeight);
         if (qualityLayout) {
@@ -1662,7 +1681,8 @@ export const renderWithSharp = async (
             qualityLayout,
             input.badgeTopOffset,
             Math.round(input.outputHeight * 0.4),
-            'down'
+            'down',
+            qualityAlign
           );
           if (rowY === null) {
             warnCollision('Poster quality badges could not avoid collision at top');
@@ -1685,7 +1705,8 @@ export const renderWithSharp = async (
               qualityLayout,
               input.badgeTopOffset,
               preferredBottomRowY,
-              'up'
+              'up',
+              qualityAlign
             )
             : null;
         if (bottomRowY === null) {
@@ -1712,7 +1733,8 @@ export const renderWithSharp = async (
             qualityLayout,
             input.badgeTopOffset,
             maxRowY,
-            'up'
+            'up',
+            qualityAlign
           );
           if (rowY === null) {
             warnCollision('Poster quality badges could not avoid collision above logo');

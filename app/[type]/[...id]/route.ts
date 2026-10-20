@@ -3542,9 +3542,14 @@ export async function GET(
               posterOverlayBodyReservedHeight +
               (bottomQualityReservedHeight > 0 ? bottomQualityReservedHeight : baseBadgeHeight)
               : 0;
-          const overlayReservedHeight = posterOverlayPresent
-            ? posterOverlayReservedHeight
-            : bottomQualityReservedHeight;
+          // Backdrop-as-poster: the title/logo is placed by the renderer in the free centre
+          // between the side columns. Reserving a full-width band here only hides usable
+          // height, which pushed the columns down to one badge each.
+          const overlayReservedHeight = isBackdropAsPoster
+            ? 0
+            : posterOverlayPresent
+              ? posterOverlayReservedHeight
+              : bottomQualityReservedHeight;
           const posterBaseMetrics: BadgeLayoutMetrics = {
             iconSize: badgeIconSize,
             fontSize: badgeFontSize,
@@ -3567,7 +3572,10 @@ export async function GET(
             false,
             verticalBadgeContent
           );
-          const shouldPreservePosterBadgeSizeForOverlay = overlayReservedHeight > 0;
+          // Backdrop-as-poster keeps the poster badge size: the wide, short canvas must fit
+          // fewer badges at the real size, not shrink the text to cram more in.
+          const shouldPreservePosterBadgeSizeForOverlay =
+            overlayReservedHeight > 0 || isBackdropAsPoster;
           if (!isSingleSideVerticalPoster && !shouldPreservePosterBadgeSizeForOverlay) {
             fittedPosterMetrics = fitPosterBadgeMetricsToHeight(
               posterColumns,
