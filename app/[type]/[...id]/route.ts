@@ -3540,11 +3540,17 @@ export async function GET(
               posterOverlayBodyReservedHeight +
               (bottomQualityReservedHeight > 0 ? bottomQualityReservedHeight : baseBadgeHeight)
               : 0;
-          // Backdrop-as-poster: the title/logo is placed by the renderer in the free centre
-          // between the side columns, so it must not reserve a full-width band. The bottom row
-          // is handled by the renderer too, which slides it aside when a column reaches it.
+          // Backdrop-as-poster: when anything sits on the bottom row, reserve that strip so the
+          // genre/ranking/quality group can always be centred instead of being split to the edges.
+          const backdropBottomRowRequested =
+            posterGenrePosition === 'bottom' ||
+            posterQualityPlacement === 'bottom' ||
+            rankingPosition === 'bottom';
+          const backdropBottomRowReserved = backdropBottomRowRequested
+            ? Math.max(baseBadgeHeight + badgeGap, bottomQualityReservedHeight)
+            : 0;
           const overlayReservedHeight = isBackdropAsPoster
-            ? 0
+            ? backdropBottomRowReserved
             : posterOverlayPresent
               ? posterOverlayReservedHeight
               : bottomQualityReservedHeight;

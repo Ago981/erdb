@@ -737,6 +737,8 @@ export const renderWithSharp = async (
     let lastPosterQualityRowLeft = 0;
     let lastPosterQualityRowRight = 0;
     let lastPosterQualityPlacement = '';
+    let lastQualityOverlayRange: [number, number] | null = null;
+    let lastRankingOverlayIndex: number | null = null;
     let rankingPlacedSameRowAsQuality = false;
     let lastRankingRowLeft = 0;
     let lastRankingRowRight = 0;
@@ -1324,6 +1326,7 @@ export const renderWithSharp = async (
     ): number => {
       const layout = getQualityBadgeRowLayout(rowBadges, baseHeight);
       if (!layout) return 0;
+      const overlayStart = overlays.length;
       const { badgeWidths, height: qualityHeight, rowGap } = layout;
       const rowInset = usePosterLayout ? input.posterRowHorizontalInset : 12;
       let rowX = typeof forcedLeft === 'number'
@@ -1357,6 +1360,9 @@ export const renderWithSharp = async (
         lastPosterQualityRowLeft = rowStartX;
         lastPosterQualityRowRight = rowX - rowGap;
         lastPosterQualityPlacement = placement;
+        if (placement === 'bottom') {
+          lastQualityOverlayRange = [overlayStart, overlays.length];
+        }
       }
       return qualityHeight;
     };
@@ -1776,16 +1782,18 @@ export const renderWithSharp = async (
             rankingPosRaw === 'auto' ? (lastOverlayTopY > 0 ? 'above-logo' : 'top') : rankingPosRaw;
           const rankingOnRow = input.rankingBadge != null && resolvedRankingPos === qualityPlacement;
           if (rankingOnRow && earlyRankingWidth > 0) {
-            // Genre + ranking + chips on one centred block: the ranking sits between them.
+            // Genre + ranking + chips on one centred block: the ranking sits between them, but
+            // only when the whole block actually fits. Otherwise the chips keep their normal
+            // right-aligned slot instead of being clamped to the left edge.
             const rankingSlotGap = Math.max(3, Math.round(input.badgeGap * 0.35));
             const groupWidth =
               genreRowWidth + genreRowGap + earlyRankingWidth + rankingSlotGap + qualityLayout.rowWidth;
             const groupLeft = Math.round((input.outputWidth - groupWidth) / 2);
             const chipsLeft = groupLeft + groupWidth - qualityLayout.rowWidth;
-            preferredRowLeft = Math.max(
-              rowInset,
-              Math.min(chipsLeft, qualityRowRightBound - qualityLayout.rowWidth)
-            );
+            const maxChipsLeft = input.outputWidth - rowInset - qualityLayout.rowWidth;
+            if (groupLeft >= rowInset && chipsLeft <= maxChipsLeft) {
+              preferredRowLeft = chipsLeft;
+            }
           } else {
             const genreLeftFits = !posterBlockingRects.some((rect) =>
               rectsOverlap(
@@ -1799,16 +1807,13 @@ export const renderWithSharp = async (
               )
             );
             if (!genreLeftFits) {
-              const groupLeft = Math.round(
-                (input.outputWidth - (genreRowWidth + genreRowGap + qualityLayout.rowWidth)) / 2
-              );
-              preferredRowLeft = Math.max(
-                rowInset,
-                Math.min(
-                  groupLeft + genreRowWidth + genreRowGap,
-                  qualityRowRightBound - qualityLayout.rowWidth
-                )
-              );
+              const groupWidth = genreRowWidth + genreRowGap + qualityLayout.rowWidth;
+              const groupLeft = Math.round((input.outputWidth - groupWidth) / 2);
+              const chipsLeft = groupLeft + genreRowWidth + genreRowGap;
+              // Centre the pair only when it fits; otherwise leave the chips right-aligned.
+              if (groupLeft >= rowInset && chipsLeft <= input.outputWidth - rowInset - qualityLayout.rowWidth) {
+                preferredRowLeft = chipsLeft;
+              }
             }
           }
         }
@@ -2176,6 +2181,29 @@ export const renderWithSharp = async (
 
       const genreSameRowResult = tryGenreSameRowAsQuality() ?? tryGenreSameRowAsRanking();
       if (genreSameRowResult) {
+        // When this row also holds the ranking and the quality chips, centre the whole block
+        // using the widths that were actually drawn instead of the estimates.
+        if (
+          lastRankingOverlayIndex !== null &&
+          lastRankingRowTopY > 0 &&
+          lastRankingPlacement === position
+        ) {
+          const groupRight = Math.max(lastPosterQualityRowRight, lastRankingRowRight);
+          const shift = Math.round(input.outputWidth / 2 - (genreSameRowResult.left + groupRight) / 2);
+          if (Math.abs(shift) >= 2) {
+            if (lastQualityOverlayRange) {
+              for (let i = lastQualityOverlayRange[0]; i < lastQualityOverlayRange[1]; i += 1) {
+                overlays[i].left += shift;
+              }
+            }
+            overlays[lastRankingOverlayIndex].left += shift;
+            genreSameRowResult.left += shift;
+            lastRankingRowLeft += shift;
+            lastRankingRowRight += shift;
+            lastPosterQualityRowLeft += shift;
+            lastPosterQualityRowRight += shift;
+          }
+        }
         const badgeSvg = buildBadgeSvg({
           width: genreWidth,
           height: genreHeight,
@@ -2691,6 +2719,7 @@ export const renderWithSharp = async (
         const rowY = sameRowResult.scaled
           ? Math.max(0, lastPosterQualityTopY + Math.round((lastPosterQualityBottomY - lastPosterQualityTopY - useHeight) / 2))
           : sameRowResult.top;
+        lastRankingOverlayIndex = overlays.length;
         overlays.push({ input: useBuffer, top: rowY, left: sameRowResult.left });
         addPosterBlockingRect(sameRowResult.left, rowY, useWidth, useHeight);
         rankingPlacedSameRowAsQuality = sameRowResult.kind === 'quality';

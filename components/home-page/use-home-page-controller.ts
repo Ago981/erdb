@@ -963,7 +963,7 @@ export function useHomePageController({
       if (isPreset1 || shouldUsePosterAverageRatings) {
         query.set('posterRatingsMode', 'average');
       }
-      const effectiveGenrePos = isPreset1 ? 'top' : (isPreset2 ? 'top' : (isPreset3 ? 'bottom' : (isPreset5 ? 'above-logo' : (isPreset4 ? 'off' : ((isPreset6 || isPreset7) ? 'bottom' : posterGenrePosition)))));
+      const effectiveGenrePos = posterGenrePosition;
       if (effectiveGenrePos !== 'off') {
         query.set('posterGenrePosition', effectiveGenrePos);
       }
@@ -1015,7 +1015,7 @@ export function useHomePageController({
     if (shouldShowQualityBadgesSide && qualityBadgesSide !== 'left') {
       query.set('qualityBadgesSide', qualityBadgesSide);
     }
-    const effectivePosterQualityBadgesPosition = (isPreset3 || isPreset6 || isPreset7) ? 'bottom' : (isPreset5 ? 'above-logo' : (isPreset ? 'top' : posterQualityBadgesPosition));
+    const effectivePosterQualityBadgesPosition = posterQualityBadgesPosition;
     if (shouldShowQualityBadgesPosition && effectivePosterQualityBadgesPosition !== 'auto') {
       query.set('posterQualityBadgesPosition', effectivePosterQualityBadgesPosition);
     }
@@ -1293,7 +1293,7 @@ export function useHomePageController({
     if (shouldShowPosterQualityBadgesSide && qualityBadgesSide !== 'left') {
       config.qualityBadgesSide = qualityBadgesSide;
     }
-    const effectivePosterQualityBadgesPosition = (isPreset3 || isPreset6 || isPreset7) ? 'bottom' : (isPreset5 ? 'above-logo' : (isPreset ? 'top' : posterQualityBadgesPosition));
+    const effectivePosterQualityBadgesPosition = posterQualityBadgesPosition;
     if (shouldShowPosterQualityBadgesPosition && effectivePosterQualityBadgesPosition !== 'auto') {
       config.posterQualityBadgesPosition = effectivePosterQualityBadgesPosition;
     }
@@ -1347,7 +1347,7 @@ export function useHomePageController({
         config.posterRatingsMode = 'average';
       }
       config.posterRatingsLayout = effectivePosterRatingsLayout;
-      const effectiveGenrePos = isPreset1 ? 'top' : (isPreset2 ? 'top' : (isPreset3 ? 'bottom' : (isPreset5 ? 'above-logo' : (isPreset4 ? 'off' : ((isPreset6 || isPreset7) ? 'bottom' : posterGenrePosition)))));
+      const effectiveGenrePos = posterGenrePosition;
       if (effectiveGenrePos !== 'off') {
         config.posterGenrePosition = effectiveGenrePos;
       }
@@ -1633,7 +1633,7 @@ export function useHomePageController({
     if (shouldShowPosterQualityBadgesSide && qualityBadgesSide !== 'left') {
       config.qualityBadgesSide = qualityBadgesSide;
     }
-    const effectivePosterQualityBadgesPosition = (isPreset3 || isPreset6 || isPreset7) ? 'bottom' : (isPreset5 ? 'above-logo' : (isPreset ? 'top' : posterQualityBadgesPosition));
+    const effectivePosterQualityBadgesPosition = posterQualityBadgesPosition;
     if (shouldShowPosterQualityBadgesPosition && effectivePosterQualityBadgesPosition !== 'auto') {
       config.posterQualityBadgesPosition = effectivePosterQualityBadgesPosition;
     }
@@ -1656,7 +1656,7 @@ export function useHomePageController({
         config.posterRatingsMode = 'average';
       }
       config.posterRatingsLayout = effectivePosterRatingsLayout;
-      const effectiveGenrePos = isPreset1 ? 'top' : (isPreset2 ? 'top' : (isPreset3 ? 'bottom' : (isPreset5 ? 'above-logo' : (isPreset4 ? 'off' : ((isPreset6 || isPreset7) ? 'bottom' : posterGenrePosition)))));
+      const effectiveGenrePos = posterGenrePosition;
       if (effectiveGenrePos !== 'off') {
         config.posterGenrePosition = effectiveGenrePos;
       }
