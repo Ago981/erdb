@@ -1365,7 +1365,8 @@ export const renderWithSharp = async (
       maxY: number,
       direction: 'up' | 'down',
       align: 'left' | 'center' | 'right' = 'center',
-      rightBound: number = input.outputWidth
+      rightBound: number = input.outputWidth,
+      preferredLeft?: number
     ) => {
       const minTop = Math.max(input.badgeTopOffset, Math.round(minY));
       const maxTop = Math.max(
@@ -1384,11 +1385,13 @@ export const renderWithSharp = async (
       const centerX = Math.max(rowInset, Math.round((input.outputWidth - layout.rowWidth) / 2));
       const xCandidates = Array.from(
         new Set(
-          align === 'right'
-            ? [edgeRightX, boundRightX, centerX]
-            : align === 'left'
-              ? [rowInset]
-              : [centerX]
+          typeof preferredLeft === 'number'
+            ? [preferredLeft, edgeRightX, boundRightX, centerX]
+            : align === 'right'
+              ? [edgeRightX, boundRightX, centerX]
+              : align === 'left'
+                ? [rowInset]
+                : [centerX]
         )
       );
       const fitsAt = (top: number, left: number) => {
@@ -1726,6 +1729,52 @@ export const renderWithSharp = async (
           input.outputHeight - input.badgeBottomOffset - Math.min(posterQualityMaxHeight, Math.round(posterReferenceBadgeHeight))
         );
         const qualityLayout = getQualityBadgeRowLayout(input.qualityBadges, posterReferenceBadgeHeight);
+        // When the genre shares this row but a rating column owns the bottom-left corner, centre
+        // the pair instead of pushing it against the right column.
+        let preferredRowLeft: number | undefined;
+        if (qualityLayout && genreSharesQualityRow && input.posterGenreBadge) {
+          const rowInset = usePosterLayout ? input.posterRowHorizontalInset : 12;
+          const genreRowHeight = estimateBadgeHeight(
+            input.badgeFontSize,
+            input.badgePaddingX,
+            input.badgePaddingY,
+            0,
+            'standard'
+          );
+          const genreRowWidth = estimateBadgeWidth(
+            input.posterGenreBadge.value,
+            input.badgeFontSize,
+            input.badgePaddingX,
+            0,
+            input.badgeGap,
+            false,
+            'standard'
+          );
+          const genreRowGap = Math.max(8, Math.round(input.badgeGap * 1.2));
+          const genreLeftFits = !posterBlockingRects.some((rect) =>
+            rectsOverlap(
+              {
+                left: rowInset,
+                top: Math.max(0, preferredBottomRowY + Math.round((qualityLayout.height - genreRowHeight) / 2)),
+                width: genreRowWidth,
+                height: genreRowHeight,
+              },
+              rect
+            )
+          );
+          if (!genreLeftFits) {
+            const groupLeft = Math.round(
+              (input.outputWidth - (genreRowWidth + genreRowGap + qualityLayout.rowWidth)) / 2
+            );
+            preferredRowLeft = Math.max(
+              rowInset,
+              Math.min(
+                groupLeft + genreRowWidth + genreRowGap,
+                qualityRowRightBound - qualityLayout.rowWidth
+              )
+            );
+          }
+        }
         const bottomRow =
           qualityLayout
             ? findPosterQualityRowY(
@@ -1735,7 +1784,8 @@ export const renderWithSharp = async (
               preferredBottomRowY,
               'up',
               qualityAlign,
-              qualityRowRightBound
+              qualityRowRightBound,
+              preferredRowLeft
             )
             : null;
         if (bottomRow === null) {
