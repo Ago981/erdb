@@ -2046,12 +2046,21 @@ export const renderWithSharp = async (
         if (rankingPlacedSameRowAsQuality) return null;
         if (position !== lastPosterQualityPlacement) return null;
         const rowInset = usePosterLayout ? input.posterRowHorizontalInset : 12;
-        if (genreWidth > lastPosterQualityRowLeft - rowInset) return null;
-        const genreLeft = rowInset;
         const rowY = Math.max(0, lastPosterQualityTopY + Math.round((lastPosterQualityBottomY - lastPosterQualityTopY - genreHeight) / 2));
-        const genreRect: OverlayRect = { left: genreLeft, top: rowY, width: genreWidth, height: genreHeight };
-        if (posterBlockingRects.some((rect) => rectsOverlap(genreRect, rect))) return null;
-        return { left: genreLeft, top: rowY };
+        const gapToChips = Math.max(8, Math.round(input.badgeGap * 1.2));
+        // Prefer the left inset (genre on the left, chips on the right). If a rating column
+        // occupies that corner, sit right next to the chips instead: the pair stays on one row.
+        const genreLeftCandidates = [
+          rowInset,
+          Math.max(rowInset, lastPosterQualityRowLeft - gapToChips - genreWidth),
+        ];
+        for (const genreLeft of genreLeftCandidates) {
+          if (genreLeft + genreWidth > lastPosterQualityRowLeft - 2) continue;
+          const genreRect: OverlayRect = { left: genreLeft, top: rowY, width: genreWidth, height: genreHeight };
+          if (posterBlockingRects.some((rect) => rectsOverlap(genreRect, rect))) continue;
+          return { left: genreLeft, top: rowY };
+        }
+        return null;
       };
 
       const tryGenreSameRowAsRanking = (): { left: number; top: number } | null => {

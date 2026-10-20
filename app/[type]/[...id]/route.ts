@@ -3543,10 +3543,10 @@ export async function GET(
               (bottomQualityReservedHeight > 0 ? bottomQualityReservedHeight : baseBadgeHeight)
               : 0;
           // Backdrop-as-poster: the title/logo is placed by the renderer in the free centre
-          // between the side columns, so it must not reserve a full-width band. The bottom
-          // quality row still needs its own strip, or genre and chips cannot share that row.
+          // between the side columns, so it must not reserve a full-width band. The bottom row
+          // is handled by the renderer too, which slides it aside when a column reaches it.
           const overlayReservedHeight = isBackdropAsPoster
-            ? bottomQualityReservedHeight
+            ? 0
             : posterOverlayPresent
               ? posterOverlayReservedHeight
               : bottomQualityReservedHeight;
