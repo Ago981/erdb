@@ -3547,10 +3547,9 @@ export async function GET(
               : 0;
           // Backdrop-as-poster: when anything sits on the bottom row, reserve that strip so the
           // genre/ranking/quality group can always be centred instead of being split to the edges.
-          const backdropBottomRowRequested =
-            posterGenrePosition === 'bottom' ||
-            posterQualityPlacement === 'bottom' ||
-            rankingPosition === 'bottom';
+          // Only reserve the bottom strip when the ranking actually joins that row: genre+chips
+          // are narrow enough to sit between full-height columns, which frees one more row.
+          const backdropBottomRowRequested = rankingPosition === 'bottom';
           const backdropBottomRowReserved = backdropBottomRowRequested
             ? baseBadgeHeight
             : 0;

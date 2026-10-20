@@ -2803,34 +2803,44 @@ export const renderWithSharp = async (
       }
       for (const group of groups) {
         if (group.length < 2) continue;
-        const groupLeft = Math.min(...group.map((item) => item.left));
-        const groupRight = Math.max(...group.map((item) => item.right));
+        const rowInset = input.posterRowHorizontalInset;
         const rowTop = Math.min(...group.map((item) => item.top));
         const rowBottom = Math.max(...group.map((item) => item.bottom));
-        const rowInset = input.posterRowHorizontalInset;
-        // Clamp the centring to the free band at this row: wide standard columns must not be hit.
+        const originalLeft = Math.min(...group.map((item) => item.left));
+        const originalRight = Math.max(...group.map((item) => item.right));
+        // Clamp the packed block to the free band at this row: wide standard columns must not be hit.
         let leftBound = rowInset;
         let rightBound = input.outputWidth - rowInset;
         for (const rect of posterBlockingRects) {
           if (rect.top >= rowBottom || rect.top + rect.height <= rowTop) continue;
-          if (rect.left + rect.width <= groupLeft) {
+          if (rect.left + rect.width <= originalLeft) {
             leftBound = Math.max(leftBound, rect.left + rect.width);
-          } else if (rect.left >= groupRight) {
+          } else if (rect.left >= originalRight) {
             rightBound = Math.min(rightBound, rect.left);
           }
         }
-        const desiredShift = Math.round(input.outputWidth / 2 - (groupLeft + groupRight) / 2);
-        const shift = Math.max(
-          Math.round(leftBound - groupLeft),
-          Math.min(desiredShift, Math.round(rightBound - groupRight))
-        );
-        if (Math.abs(shift) < 2) continue;
-        for (const item of group) {
-          for (const index of item.overlays) {
-            overlays[index].left += shift;
+        // Pack the items side by side (uniform gap) and centre the whole block, instead of just
+        // centring the span and leaving a huge hole between them.
+        const sorted = [...group].sort((a, b) => a.left - b.left);
+        const itemGap = Math.max(8, Math.round(input.badgeGap * 1.2));
+        const totalWidth =
+          sorted.reduce((sum, item) => sum + (item.right - item.left), 0) +
+          itemGap * Math.max(0, sorted.length - 1);
+        let cursor = Math.round((input.outputWidth - totalWidth) / 2);
+        const maxStart = rightBound - totalWidth;
+        if (maxStart >= leftBound) {
+          cursor = Math.max(leftBound, Math.min(cursor, maxStart));
+        }
+        for (const item of sorted) {
+          const shift = cursor - item.left;
+          if (shift !== 0) {
+            for (const index of item.overlays) {
+              overlays[index].left += shift;
+            }
+            item.left += shift;
+            item.right += shift;
           }
-          item.left += shift;
-          item.right += shift;
+          cursor += item.right - item.left + itemGap;
         }
       }
     }
