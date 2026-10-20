@@ -198,6 +198,13 @@ export async function GET(
   const rankingCompact = rankingCompactParam === 'on' || rankingCompactParam === 'true' || rankingCompactParam === true;
   const rankingCountry = (tokenConfig.rankingCountry || request.nextUrl.searchParams.get('rankingCountry') || 'global').trim().toUpperCase();
   const rankingPosition = normalizeRankingPosition(tokenConfig.rankingPosition || request.nextUrl.searchParams.get('rankingPosition'));
+  // Unified badge style for the ranking; legacy rankingNoBox=on maps to the plateless style.
+  const rankingStyleRaw = tokenConfig.rankingStyle || request.nextUrl.searchParams.get('rankingStyle');
+  const rankingStyle = rankingStyleRaw
+    ? normalizeRatingStyle(rankingStyleRaw)
+    : rankingNoBox
+      ? 'plain'
+      : 'square';
 
   const lang = tokenConfig.lang || request.nextUrl.searchParams.get('lang') || FALLBACK_IMAGE_LANGUAGE;
   const language = lang.split('-')[0].toLowerCase();
@@ -1557,6 +1564,7 @@ export async function GET(
         rankingParam,
         rankingCountry,
         rankingNoBox ? 'nobox' : 'box',
+        `ranking-style:${rankingStyle}`,
         rankingCompact ? 'compact' : 'full',
         rankingPosition,
         posterVignetteEnabled ? 'vignette' : 'no-vignette',
@@ -3247,6 +3255,7 @@ export async function GET(
           value: `#${rankingValue}`,
           noBox: rankingNoBox,
           compact: rankingCompact,
+          style: rankingStyle,
         };
       } else if (rankingParam !== 'off') {
         const detailsBundle = detailsBundlePromise ? await detailsBundlePromise : null;
@@ -3266,6 +3275,7 @@ export async function GET(
             value: fallbackBadge.value,
             noBox: rankingNoBox,
             compact: fallbackBadge.compact ?? rankingCompact,
+            style: rankingStyle,
           };
         }
       }

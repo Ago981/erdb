@@ -1702,7 +1702,9 @@ export const renderWithSharp = async (
           null,
           rankingBadge.noBox ?? (input.posterConfiguratorPreset === 'simple'),
           rankingScale,
-          null
+          null,
+          rankingBadge.style ?? 'square',
+          input.ratingsColorMode ?? 'transparent'
         );
         const maxWidth = Math.max(1, input.outputWidth - 24);
         let width = Math.min(spec.width, maxWidth);
@@ -2370,7 +2372,9 @@ export const renderWithSharp = async (
         null,
         badge.noBox ?? (input.posterConfiguratorPreset === 'simple'),
         rankingScale,
-        measuredRankingTextWidth
+        measuredRankingTextWidth,
+        badge.style ?? 'square',
+        input.ratingsColorMode ?? 'transparent'
       );
       // The ranking SVG carries a 4px bleed around its plate, so its canvas is scaled a touch
       // larger than the plate height we want to see on the poster.
