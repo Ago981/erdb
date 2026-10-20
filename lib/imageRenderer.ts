@@ -2425,6 +2425,17 @@ export const renderWithSharp = async (
       };
       const trySameRowAsQuality = (): SameRowPlacement | null => {
         if (lastPosterQualityTopY <= 0 || !lastPosterQualityPlacement) return null;
+        // Normal poster with a bottom row and side rating columns: the ranking stays above
+        // the logo and leaves the bottom row to genre + chips.
+        if (
+          !input.backdropAsPoster &&
+          lastPosterQualityPlacement === 'bottom' &&
+          (input.posterRatingsLayout === 'left' ||
+            input.posterRatingsLayout === 'right' ||
+            input.posterRatingsLayout === 'left-right')
+        ) {
+          return null;
+        }
         const rankingPosRaw2 = input.rankingPosition || 'auto';
         const resolvedRankingPos2: string = rankingPosRaw2 === 'auto'
           ? (lastOverlayTopY > 0 ? 'above-logo' : 'top')
@@ -2616,9 +2627,20 @@ export const renderWithSharp = async (
       // sit above, so the badge goes to the bottom instead of floating over the artwork.
       const rankingPosition =
         requestedRankingPosition === 'above-logo' && lastOverlayTopY <= 0 ? 'bottom' : requestedRankingPosition;
+      // Normal poster with a bottom row and side rating columns: a bottom ranking goes above
+      // the logo instead of joining the genre + chips row.
+      const forceRankingAboveLogo =
+        !input.backdropAsPoster &&
+        rankingPosition === 'bottom' &&
+        lastOverlayTopY > 0 &&
+        (input.posterRatingsLayout === 'left' ||
+          input.posterRatingsLayout === 'right' ||
+          input.posterRatingsLayout === 'left-right');
       let top =
         rankingPosition === 'bottom'
-          ? getBottomRankingTop()
+          ? forceRankingAboveLogo
+            ? getAboveLogoRankingTop()
+            : getBottomRankingTop()
           : rankingPosition === 'above-logo'
             ? getAboveLogoRankingTop()
             : getTopRankingTop();
