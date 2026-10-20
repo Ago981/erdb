@@ -737,8 +737,8 @@ export const renderWithSharp = async (
     let lastPosterQualityRowLeft = 0;
     let lastPosterQualityRowRight = 0;
     let lastPosterQualityPlacement = '';
-    let lastQualityOverlayRange: [number, number] | null = null;
-    let lastRankingOverlayIndex: number | null = null;
+    type PosterRowItem = { overlays: number[]; left: number; right: number; top: number; bottom: number };
+    const posterRowItems: PosterRowItem[] = [];
     let rankingPlacedSameRowAsQuality = false;
     let lastRankingRowLeft = 0;
     let lastRankingRowRight = 0;
@@ -1360,9 +1360,13 @@ export const renderWithSharp = async (
         lastPosterQualityRowLeft = rowStartX;
         lastPosterQualityRowRight = rowX - rowGap;
         lastPosterQualityPlacement = placement;
-        if (placement === 'bottom') {
-          lastQualityOverlayRange = [overlayStart, overlays.length];
-        }
+        posterRowItems.push({
+          overlays: Array.from({ length: overlays.length - overlayStart }, (_, index) => overlayStart + index),
+          left: rowStartX,
+          right: rowX - rowGap,
+          top: rowY,
+          bottom: rowY + qualityHeight,
+        });
       }
       return qualityHeight;
     };
@@ -1730,6 +1734,20 @@ export const renderWithSharp = async (
       if (qualityPlacement === 'top') {
         const qualityLayout = getQualityBadgeRowLayout(input.qualityBadges, posterReferenceBadgeHeight);
         if (qualityLayout) {
+          // Ranking + chips on one centred pair at the top.
+          let preferredRowLeft: number | undefined;
+          const rankingPosRaw = input.rankingPosition || 'auto';
+          const resolvedRankingPos =
+            rankingPosRaw === 'auto' ? (lastOverlayTopY > 0 ? 'above-logo' : 'top') : rankingPosRaw;
+          if (input.rankingBadge != null && resolvedRankingPos === qualityPlacement && earlyRankingWidth > 0) {
+            const rankingSlotGap = Math.max(3, Math.round(input.badgeGap * 0.35));
+            const pairWidth = earlyRankingWidth + rankingSlotGap + qualityLayout.rowWidth;
+            const pairLeft = Math.round((input.outputWidth - pairWidth) / 2);
+            const chipsLeft = pairLeft + earlyRankingWidth + rankingSlotGap;
+            if (pairLeft >= input.posterRowHorizontalInset && chipsLeft + qualityLayout.rowWidth <= input.outputWidth - input.posterRowHorizontalInset) {
+              preferredRowLeft = chipsLeft;
+            }
+          }
           const row = findPosterQualityRowY(
             input.badgeTopOffset,
             qualityLayout,
@@ -1737,7 +1755,8 @@ export const renderWithSharp = async (
             Math.round(input.outputHeight * 0.4),
             'down',
             qualityAlign,
-            qualityRowRightBound
+            qualityRowRightBound,
+            preferredRowLeft
           );
           if (row === null) {
             // A wide horizontal row cannot fit between two wide standard columns: stack the
@@ -2181,29 +2200,6 @@ export const renderWithSharp = async (
 
       const genreSameRowResult = tryGenreSameRowAsQuality() ?? tryGenreSameRowAsRanking();
       if (genreSameRowResult) {
-        // When this row also holds the ranking and the quality chips, centre the whole block
-        // using the widths that were actually drawn instead of the estimates.
-        if (
-          lastRankingOverlayIndex !== null &&
-          lastRankingRowTopY > 0 &&
-          lastRankingPlacement === position
-        ) {
-          const groupRight = Math.max(lastPosterQualityRowRight, lastRankingRowRight);
-          const shift = Math.round(input.outputWidth / 2 - (genreSameRowResult.left + groupRight) / 2);
-          if (Math.abs(shift) >= 2) {
-            if (lastQualityOverlayRange) {
-              for (let i = lastQualityOverlayRange[0]; i < lastQualityOverlayRange[1]; i += 1) {
-                overlays[i].left += shift;
-              }
-            }
-            overlays[lastRankingOverlayIndex].left += shift;
-            genreSameRowResult.left += shift;
-            lastRankingRowLeft += shift;
-            lastRankingRowRight += shift;
-            lastPosterQualityRowLeft += shift;
-            lastPosterQualityRowRight += shift;
-          }
-        }
         const badgeSvg = buildBadgeSvg({
           width: genreWidth,
           height: genreHeight,
@@ -2222,6 +2218,13 @@ export const renderWithSharp = async (
           .replace(`width="${genreWidth}"`, `width="${genreWidth + 8}"`)
           .replace(`height="${genreHeight}"`, `height="${genreHeight + 8}"`);
         overlays.push({ input: Buffer.from(renderedSvg), top: genreSameRowResult.top - 4, left: genreSameRowResult.left - 4 });
+        posterRowItems.push({
+          overlays: [overlays.length - 1],
+          left: genreSameRowResult.left,
+          right: genreSameRowResult.left + genreWidth,
+          top: genreSameRowResult.top,
+          bottom: genreSameRowResult.top + genreHeight,
+        });
         const genrePad = Math.max(4, Math.round(Math.max(12, Math.round(input.badgeGap * 1.1)) * 0.4));
         addPosterBlockingRect(
           genreSameRowResult.left - genrePad,
@@ -2376,6 +2379,13 @@ export const renderWithSharp = async (
         .replace(`height="${genreHeight}"`, `height="${genreHeight + 8}"`);
 
       overlays.push({ input: Buffer.from(renderedSvg), top: top - 4, left: left - 4 });
+      posterRowItems.push({
+        overlays: [overlays.length - 1],
+        left,
+        right: left + genreWidth,
+        top,
+        bottom: top + genreHeight,
+      });
       const genrePad = Math.max(4, Math.round(overlapGap * 0.4));
       addPosterBlockingRect(
         left - genrePad,
@@ -2485,8 +2495,8 @@ export const renderWithSharp = async (
           genrePosition === lastPosterQualityPlacement;
         let rankingLeft = rowInset;
         const genreBadgeOnRow = genreOnRow ? input.posterGenreBadge : null;
-        if (genreBadgeOnRow) {
-          const genreWidth = estimateBadgeWidth(
+        const genreWidth = genreBadgeOnRow
+          ? estimateBadgeWidth(
             genreBadgeOnRow.value,
             input.badgeFontSize,
             input.badgePaddingX,
@@ -2494,11 +2504,15 @@ export const renderWithSharp = async (
             input.badgeGap,
             false,
             'standard'
-          );
-          const slotLeft = lastPosterQualityRowLeft - rankingGap - rowWidth;
-          const minLeft = rowInset + genreWidth + rankingGap;
-          if (slotLeft < minLeft) return null;
+          )
+          : 0;
+        // Sit immediately left of the chips so ranking + chips read as one pair.
+        const slotLeft = lastPosterQualityRowLeft - rankingGap - rowWidth;
+        const minLeft = rowInset + (genreWidth > 0 ? genreWidth + rankingGap : 0);
+        if (slotLeft >= minLeft) {
           rankingLeft = Math.round(slotLeft);
+        } else if (genreBadgeOnRow) {
+          return null;
         }
         if (scaled) {
           return { left: rankingLeft, top: lastPosterQualityTopY, scaled: true, kind: 'quality' };
@@ -2544,11 +2558,18 @@ export const renderWithSharp = async (
           );
         }
         if (lastOverlayTopY > 0) {
-          const lowerCenterStackTop =
-            lastPosterQualityTopY > 0 && lastPosterQualityTopY < lastOverlayTopY
-              ? lastPosterQualityTopY
-              : lastOverlayTopY;
-          bottomLimit = Math.min(bottomLimit, lowerCenterStackTop - renderedHeight - overlapGap);
+          const fitsBelowOverlay =
+            lastOverlayBottomY > 0 &&
+            lastOverlayBottomY + overlapGap + renderedHeight <=
+            input.outputHeight - input.badgeBottomOffset;
+          if (!fitsBelowOverlay) {
+            const lowerCenterStackTop =
+              lastPosterQualityTopY > input.outputHeight * 0.5 &&
+                lastPosterQualityTopY < lastOverlayTopY
+                ? lastPosterQualityTopY
+                : lastOverlayTopY;
+            bottomLimit = Math.min(bottomLimit, lowerCenterStackTop - renderedHeight - overlapGap);
+          }
         }
         let nextTop = bottomLimit;
         const getRankingRect = (topValue: number): OverlayRect => ({
@@ -2719,9 +2740,16 @@ export const renderWithSharp = async (
         const rowY = sameRowResult.scaled
           ? Math.max(0, lastPosterQualityTopY + Math.round((lastPosterQualityBottomY - lastPosterQualityTopY - useHeight) / 2))
           : sameRowResult.top;
-        lastRankingOverlayIndex = overlays.length;
+        const rankingOverlayIndex = overlays.length;
         overlays.push({ input: useBuffer, top: rowY, left: sameRowResult.left });
         addPosterBlockingRect(sameRowResult.left, rowY, useWidth, useHeight);
+        posterRowItems.push({
+          overlays: [rankingOverlayIndex],
+          left: sameRowResult.left,
+          right: sameRowResult.left + useWidth,
+          top: rowY,
+          bottom: rowY + useHeight,
+        });
         rankingPlacedSameRowAsQuality = sameRowResult.kind === 'quality';
         lastRankingRowLeft = sameRowResult.left;
         lastRankingRowRight = sameRowResult.left + useWidth;
@@ -2734,8 +2762,16 @@ export const renderWithSharp = async (
         warnCollision(`Ranking badge "${badge.value}" could not avoid collision`);
       } else {
         top = resolvedRankingTop;
+        const rankingOverlayIndex = overlays.length;
         overlays.push({ input: rankingBuffer, top, left });
         addPosterBlockingRect(left, top, renderedWidth, renderedHeight);
+        posterRowItems.push({
+          overlays: [rankingOverlayIndex],
+          left,
+          right: left + renderedWidth,
+          top,
+          bottom: top + renderedHeight,
+        });
         lastRankingRowLeft = left;
         lastRankingRowRight = left + renderedWidth;
         lastRankingRowTopY = top;
@@ -2749,6 +2785,55 @@ export const renderWithSharp = async (
     }
 
     composePosterGenreBadge();
+
+    // Backdrop-as-poster: whenever more than one chip shares a row, centre the whole row as a
+    // block using the widths that were actually drawn (not the estimates).
+    if (input.backdropAsPoster) {
+      const groups: PosterRowItem[][] = [];
+      for (const item of posterRowItems) {
+        const group = groups.find((candidate) =>
+          candidate.some((other) => {
+            const overlap = Math.min(item.bottom, other.bottom) - Math.max(item.top, other.top);
+            const smallest = Math.min(item.bottom - item.top, other.bottom - other.top);
+            return smallest > 0 && overlap >= smallest * 0.5;
+          })
+        );
+        if (group) group.push(item);
+        else groups.push([item]);
+      }
+      for (const group of groups) {
+        if (group.length < 2) continue;
+        const groupLeft = Math.min(...group.map((item) => item.left));
+        const groupRight = Math.max(...group.map((item) => item.right));
+        const rowTop = Math.min(...group.map((item) => item.top));
+        const rowBottom = Math.max(...group.map((item) => item.bottom));
+        const rowInset = input.posterRowHorizontalInset;
+        // Clamp the centring to the free band at this row: wide standard columns must not be hit.
+        let leftBound = rowInset;
+        let rightBound = input.outputWidth - rowInset;
+        for (const rect of posterBlockingRects) {
+          if (rect.top >= rowBottom || rect.top + rect.height <= rowTop) continue;
+          if (rect.left + rect.width <= groupLeft) {
+            leftBound = Math.max(leftBound, rect.left + rect.width);
+          } else if (rect.left >= groupRight) {
+            rightBound = Math.min(rightBound, rect.left);
+          }
+        }
+        const desiredShift = Math.round(input.outputWidth / 2 - (groupLeft + groupRight) / 2);
+        const shift = Math.max(
+          Math.round(leftBound - groupLeft),
+          Math.min(desiredShift, Math.round(rightBound - groupRight))
+        );
+        if (Math.abs(shift) < 2) continue;
+        for (const item of group) {
+          for (const index of item.overlays) {
+            overlays[index].left += shift;
+          }
+          item.left += shift;
+          item.right += shift;
+        }
+      }
+    }
 
     const background =
       input.imageType === 'logo'
